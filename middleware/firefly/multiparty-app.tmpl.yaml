@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/YOUR_ORG/onchain-org-stack
+    repoURL: ${REPO_URL}
     targetRevision: HEAD
     path: charts/firefly
     helm:
