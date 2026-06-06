@@ -13,13 +13,13 @@ spec:
     targetRevision: v1.21.0
     helm:
       values: |
+        developerMode: true
+        scyllaArgs: "--smp 1 --memory 1500M"
         scylla:
-          developerMode: true
           datacenter: dc1
         racks:
           - name: us-east-1a
             members: 1
-            scyllaArgs: "--smp 1 --memory 1500M"
             storage:
               storageClassName: local-path
               capacity: 10Gi
