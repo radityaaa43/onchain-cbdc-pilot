@@ -14,18 +14,18 @@ spec:
     helm:
       values: |
         developerMode: true
-        scyllaArgs: "--smp 1 --memory 800M"
+        scyllaArgs: "--smp 1 --memory 450M"
         scylla:
           datacenter: dc1
         racks:
           - name: us-east-1a
-            members: 1
+            members: 0
             storage:
               storageClassName: local-path
               capacity: 10Gi
             resources:
               limits:
-                cpu: "2"
+                cpu: "1"
                 memory: 2Gi
               requests:
                 cpu: "500m"
