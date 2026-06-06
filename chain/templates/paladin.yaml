@@ -44,6 +44,8 @@ spec:
       kind: Paladin
       jsonPointers:
         - /spec/service/ports
+      jqPathExpressions:
+        - .spec.transports[].ports[].protocol
     - group: core.paladin.io
       kind: Besu
       jsonPointers:
