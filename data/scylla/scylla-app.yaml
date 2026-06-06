@@ -14,7 +14,7 @@ spec:
     helm:
       values: |
         developerMode: true
-        scyllaArgs: "--smp 1 --memory 1500M"
+        scyllaArgs: "--smp 1 --memory 800M"
         scylla:
           datacenter: dc1
         racks:
