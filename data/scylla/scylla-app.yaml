@@ -14,12 +14,11 @@ spec:
     helm:
       values: |
         developerMode: true
-        scyllaArgs: "--smp 1 --memory 450M"
         scylla:
           datacenter: dc1
         racks:
           - name: us-east-1a
-            members: 0
+            members: 1
             storage:
               storageClassName: local-path
               capacity: 10Gi
@@ -28,7 +27,7 @@ spec:
                 cpu: "1"
                 memory: 2Gi
               requests:
-                cpu: "500m"
+                cpu: "1"
                 memory: 2Gi
   destination:
     server: https://kubernetes.default.svc
