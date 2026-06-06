@@ -9,8 +9,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: ${REPO_URL}
-    targetRevision: ${REPO_REVISION}
+    repoURL: https://github.com/radityaaa43/onchain-org-stack
+    targetRevision: HEAD
     path: middleware/firefly
     directory:
       include: "values/firefly-cors-middleware.yaml"

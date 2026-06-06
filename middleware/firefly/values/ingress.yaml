@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: firefly
+  namespace: firefly
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: firefly-firefly-cors@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: firefly.org1.cluster.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: firefly-multiparty
+                port:
+                  number: 5000
