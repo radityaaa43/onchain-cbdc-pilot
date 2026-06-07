@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/radityaaa43/onchain-org-stack
+    repoURL: https://github.com/radityaaa43/onchain-cbdc-pilot
     targetRevision: HEAD
     path: data/kafka
     helm:
