@@ -1,0 +1,30 @@
+mode: standalone
+
+existingSecret: minio-credentials
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 200Gi
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: "0.25"
+  limits:
+    memory: 1Gi
+    cpu: "1"
+
+buckets:
+  - name: cbdc-kyc
+    policy: none
+    purge: false
+  - name: cbdc-settlement
+    policy: none
+    purge: false
+  - name: cbdc-audit
+    policy: none
+    purge: false
+
+nodeSelector:
+  kubernetes.io/arch: amd64

@@ -1,25 +1,24 @@
 ---
-# onchain-org-stack config.yaml
+# onchain-cbdc-pilot config.yaml
 # THE ONLY FILE YOU EDIT PER ORG.
 # After editing: bash scripts/render.sh --write
 #                git add -A && git commit -m "configure org"
 #                bash bootstrap.sh
 
 org:
-  name: org1
-  domain: org1.cluster.local
-  email: admin@org1.example
-  signingKey: "0x75a99473917701038e854ef6999c76cd947c9f9e"  # FireFly org key — Besu dev account
+  name: cbdc-pilot
+  domain: cbdc.cluster.local
+  email: admin@cbdc.example
 
 repo:
-  url: https://github.com/radityaaa43/onchain-org-stack
+  url: https://github.com/radityaaa43/onchain-cbdc-pilot
   revision: HEAD
 
 arch: amd64
 
 besu:
   chainId: 1337
-  blockPeriodSeconds: 1
+  blockPeriodSeconds: 2
   zeroBaseFee: true
   evmFork: cancun
   imageTag: latest
@@ -31,10 +30,23 @@ paladin:
   baseNodePort: 31548
   domains:
     noto: true
-    zeto: true
+    zeto: false        # disabled — no AVX2
     pente: true
+
+minio:
+  rootUser: minioadmin
+  buckets:
+    - cbdc-kyc
+    - cbdc-settlement
+    - cbdc-audit
+
+kafka:
+  topics:
+    - cbdc.tx.confirmed
+    - cbdc.mint
+    - cbdc.transfer
+    - cbdc.audit
 
 crossOrg:
   mode: standalone
-  sharedGenesisRef: ""
   peers: []

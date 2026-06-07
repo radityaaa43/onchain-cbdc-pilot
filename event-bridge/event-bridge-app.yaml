@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cbdc-event-bridge
+  namespace: paladin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cbdc-event-bridge
+  template:
+    metadata:
+      labels:
+        app: cbdc-event-bridge
+    spec:
+      containers:
+        - name: event-bridge
+          image: ghcr.io/radityaaa43/cbdc-event-bridge:latest
+          env:
+            - name: PALADIN_URL
+              value: "http://paladin-node1.paladin.svc:8548"
+            - name: KAFKA_BROKERS
+              value: "kafka-controller.kafka.svc:9092"
+            - name: POLL_INTERVAL_MS
+              value: "500"
+          resources:
+            limits:
+              cpu: "0.2"
+              memory: 128Mi
+            requests:
+              cpu: "0.1"
+              memory: 64Mi
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import os; os.path.exists('/tmp/alive')"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      restartPolicy: Always

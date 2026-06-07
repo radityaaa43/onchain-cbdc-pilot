@@ -1,0 +1,67 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.min.io
+    chart: minio
+    targetRevision: 5.4.0
+    helm:
+      values: |
+        mode: standalone
+
+        rootUser: minioadmin
+        rootPassword: ""           # injected from vault secret at runtime
+        existingSecret: minio-credentials
+
+        persistence:
+          enabled: true
+          storageClass: local-path
+          size: 200Gi
+
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: "0.25"
+          limits:
+            memory: 1Gi
+            cpu: "1"
+
+        buckets:
+          - name: cbdc-kyc
+            policy: none
+            purge: false
+          - name: cbdc-settlement
+            policy: none
+            purge: false
+          - name: cbdc-audit
+            policy: none
+            purge: false
+            versioning: true       # immutable audit trail
+
+        environment:
+          MINIO_BROWSER_REDIRECT_URL: ""
+          MINIO_COMPRESSION_ENABLE: "on"
+          MINIO_COMPRESSION_EXTENSIONS: ".json,.txt,.pdf"
+
+        metrics:
+          serviceMonitor:
+            enabled: true
+            namespace: monitoring
+
+        nodeSelector:
+          kubernetes.io/arch: amd64
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

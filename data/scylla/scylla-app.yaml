@@ -13,7 +13,7 @@ spec:
     targetRevision: v1.21.0
     helm:
       values: |
-        developerMode: true
+        developerMode: false
         scylla:
           datacenter: dc1
         racks:
@@ -21,14 +21,14 @@ spec:
             members: 1
             storage:
               storageClassName: local-path
-              capacity: 10Gi
+              capacity: 100Gi
             resources:
               limits:
-                cpu: "1"
-                memory: 2Gi
+                cpu: "4"
+                memory: 4Gi
               requests:
-                cpu: "1"
-                memory: 2Gi
+                cpu: "2"
+                memory: 4Gi
   destination:
     server: https://kubernetes.default.svc
     namespace: scylla
