@@ -94,11 +94,29 @@ bash scripts/deploy-data.sh
 # ─── STEP 6: kafka + scylla ───────────────────
 log "STEP 6: kafka + scylla"
 kubectl apply -f data/kafka/kafka-operator-app.yaml
+
+echo "Waiting for ArgoCD to sync strimzi-kafka-operator..."
+kubectl wait application/strimzi-kafka-operator \
+  --namespace argocd \
+  --for=jsonpath='{.status.sync.status}'=Synced \
+  --timeout=300s 2>/dev/null || true
+
+echo "Waiting for kafka namespace to exist..."
+for i in $(seq 1 30); do
+  if kubectl get namespace kafka &>/dev/null; then
+    echo "  kafka namespace ready"
+    break
+  fi
+  echo "  [$i/30] waiting for kafka namespace..."
+  sleep 5
+done
+
 echo "Waiting for Strimzi cluster operator to be ready..."
 kubectl wait deployment/strimzi-cluster-operator \
   --namespace kafka \
   --for=condition=Available \
   --timeout=300s
+
 kubectl apply -f data/kafka/kafka-cluster-app.yaml
 
 echo "Waiting for Kafka cluster to be ready (max 5 min)..."
