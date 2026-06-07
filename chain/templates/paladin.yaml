@@ -66,10 +66,29 @@ spec:
       kind: PaladinDomain
       jsonPointers:
         - /spec/registryAddress
+        - /status
     - group: core.paladin.io
       kind: PaladinRegistry
+      jsonPointers:
+        - /status
       jqPathExpressions:
         - .spec.transports
+    - group: core.paladin.io
+      kind: SmartContractDeployment
+      jsonPointers:
+        - /status
+    - group: core.paladin.io
+      kind: PaladinRegistration
+      jsonPointers:
+        - /status
+    - group: core.paladin.io
+      kind: BesuGenesis
+      jsonPointers:
+        - /status
+    - group: core.paladin.io
+      kind: TransactionInvoke
+      jsonPointers:
+        - /status
   destination:
     server: https://kubernetes.default.svc
     namespace: paladin
