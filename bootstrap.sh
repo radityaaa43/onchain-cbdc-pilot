@@ -3,15 +3,13 @@ set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
 # onchain-cbdc-pilot bootstrap
-# Usage: bash bootstrap.sh [--skip-firefly] [--skip-contracts]
+# Usage: bash bootstrap.sh [--skip-contracts]
 # Requires: kubectl, helm, git, python3+pyyaml, curl
 # ─────────────────────────────────────────────────────────────────────────────
 
-SKIP_FIREFLY=false
 SKIP_CONTRACTS=false
 for arg in "$@"; do
   case $arg in
-    --skip-firefly)   SKIP_FIREFLY=true ;;
     --skip-contracts) SKIP_CONTRACTS=true ;;
   esac
 done
@@ -108,23 +106,8 @@ kubectl wait pod --selector app.kubernetes.io/name=vault \
   --namespace vault --for=condition=Ready --timeout=120s 2>/dev/null || true
 
 # ─── STEP 5: data layer ───────────────────────────────────────────────────────
-log "STEP 5: data layer (postgres + minio + mongodb + redis)"
+log "STEP 5: data layer (postgres + minio)"
 bash scripts/deploy-data.sh
-
-helm repo add bitnami https://charts.bitnami.com/bitnami --force-update 2>/dev/null
-helm repo update bitnami 2>/dev/null
-kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
-
-helm upgrade --install mongodb bitnami/mongodb \
-  --namespace database --version 19.1.4 \
-  --values data/mongodb/mongodb-values.yaml \
-  --set auth.rootPassword=cbdcMongo2024! \
-  --wait --timeout 300s
-
-helm upgrade --install redis bitnami/redis \
-  --namespace database --version 27.0.4 \
-  --values data/redis/redis-values.yaml \
-  --wait --timeout 300s
 
 # ─── STEP 6: kafka ────────────────────────────────────────────────────────────
 log "STEP 6: kafka"
@@ -225,36 +208,16 @@ log "STEP 9: monitoring (Prometheus + Loki)"
 kubectl apply -f platform/argocd/apps/monitoring.yaml
 kubectl apply -f platform/argocd/apps/loki.yaml
 
-# ─── STEP 10: FireFly middleware ──────────────────────────────────────────────
-if [[ "$SKIP_FIREFLY" == "false" ]]; then
-  log "STEP 10: FireFly — IPFS → Signer → EVMConnect → Core"
-
-  kubectl apply -f middleware/firefly/ipfs-app.yaml
-  wait_app_synced ipfs 300
-
-  kubectl apply -f middleware/firefly/signer-app.yaml
-  wait_app_synced firefly-signer 300
-
-  kubectl apply -f middleware/firefly/evmconnect-app.yaml
-  wait_app_synced firefly-evmconnect 300
-
-  kubectl apply -f middleware/firefly/firefly-app.yaml
-  echo "FireFly core deployed. First startup: ~2-5 min (org/node registration)."
-  echo "Watch: kubectl logs -n firefly -l app.kubernetes.io/name=firefly -f"
-else
-  log "STEP 10: FireFly — SKIPPED (--skip-firefly)"
-fi
-
-# ─── STEP 11: CBDC contracts ──────────────────────────────────────────────────
+# ─── STEP 10: CBDC contracts ──────────────────────────────────────────────────
 if [[ "$SKIP_CONTRACTS" == "false" ]]; then
-  log "STEP 11: Deploy CBDC contracts (Pente)"
+  log "STEP 10: Deploy CBDC contracts (Pente)"
   if command -v node &>/dev/null && command -v npm &>/dev/null; then
     bash scripts/deploy-contracts.sh
   else
     echo "  SKIP: node/npm not installed. Run manually: bash scripts/deploy-contracts.sh"
   fi
 else
-  log "STEP 11: CBDC contracts — SKIPPED (--skip-contracts)"
+  log "STEP 10: CBDC contracts — SKIPPED (--skip-contracts)"
 fi
 
 # ─── Done ─────────────────────────────────────────────────────────────────────
@@ -272,12 +235,6 @@ for node in $(seq 1 "$NODE_COUNT"); do
 done
 echo ""
 echo "Kafka topics:  cbdc.tx.confirmed  cbdc.mint  cbdc.transfer  cbdc.audit"
-if [[ "$SKIP_FIREFLY" == "false" ]]; then
-  echo ""
-  echo "FireFly:"
-  echo "  kubectl port-forward svc/firefly 5000:5000 -n firefly"
-  echo "  curl http://localhost:5000/api/v1/namespaces/default/status"
-fi
 echo ""
 echo "All ArgoCD apps: kubectl get applications -n argocd"
 echo ""
