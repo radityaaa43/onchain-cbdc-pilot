@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Event Bridge — Paladin webhook → Kafka topics
-Subscribes to Paladin event stream, publishes to cbdc.* Kafka topics.
+Event Bridge — Paladin JSON-RPC → Kafka topics
+Polls ptx_queryTransactionReceipts, routes confirmed txs to cbdc.* topics.
 """
 import os, json, time, logging
 import requests
@@ -11,110 +11,93 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("event-bridge")
 
 PALADIN_URL   = os.environ.get("PALADIN_URL", "http://paladin-node1.paladin.svc:8548")
-KAFKA_BROKERS = os.environ.get("KAFKA_BROKERS", "kafka-controller.kafka.svc:9092")
-POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_MS", "500"))
+KAFKA_BROKERS = os.environ.get("KAFKA_BROKERS", "kafka-kafka-bootstrap.kafka.svc:9092")
+POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_MS", "1000"))
 
-# Event signature → Kafka topic
-# Sources: CBToken, FixedIncomeToken, DVPService (all deployed in Pente group)
-TOPIC_MAP = {
-    # CBDC lifecycle
-    "Transfer(address,address,uint256)":                            "cbdc.transfer",
-    "CBDCTransferred(address,address,uint256)":                     "cbdc.transfer",
-    "Issued(address,address,uint256,bytes)":                        "cbdc.mint",      # CBToken mint
-    "IssuedByPartition(bytes32,address,address,uint256,bytes,bytes)": "cbdc.mint",    # bond issuance
-
-    # DVP settlement
-    "DVPSettlementConfirmed(bytes32)":                              "cbdc.tx.confirmed",
-    "DVPSettlementInitiated(bytes32,bytes32,address,address,uint256,uint256)": "cbdc.tx.confirmed",
-
-    # Bond lifecycle
-    "TransferByPartition(bytes32,address,address,address,uint256,bytes,bytes)": "cbdc.transfer",
-    "ChangedPartition(bytes32,bytes32,uint256)":                    "cbdc.audit",
-
-    # Failures & audit
-    "DVPSettlementFailed(bytes32,string)":                          "cbdc.audit",
-    "DVPSettlementCancelled(bytes32,string)":                       "cbdc.audit",
-    "RedeemedByPartition(bytes32,address,address,uint256,bytes)":   "cbdc.audit",
+# Domain/type → Kafka topic routing
+# Extended after contracts deployed — falls back to cbdc.tx.confirmed
+DOMAIN_TOPIC = {
+    "noto":  "cbdc.transfer",   # CBDC token operations
+    "pente": "cbdc.tx.confirmed",  # private EVM (DVP, bonds)
 }
-AUDIT_TOPIC = "cbdc.audit"
 
 
-def topic_for(event: dict) -> str:
-    sig = event.get("signature", "")
-    # exact match first
-    if sig in TOPIC_MAP:
-        return TOPIC_MAP[sig]
-    # prefix match on event name (before first '(')
-    name = sig.split("(")[0]
-    for k, t in TOPIC_MAP.items():
-        if k.startswith(name + "("):
-            return t
-    return AUDIT_TOPIC
-
-
-def create_eventstream(session: requests.Session) -> str:
-    resp = session.post(f"{PALADIN_URL}/api/v1/eventstreams", json={
-        "name":      "cbdc-bridge",
-        "type":      "webhook",
-        "batchSize": 50,
-        "batchTimeout": "500ms",
-    })
-    if resp.status_code in (200, 409):  # 409 = already exists
-        streams = session.get(f"{PALADIN_URL}/api/v1/eventstreams").json()
-        for s in streams:
-            if s.get("name") == "cbdc-bridge":
-                log.info("eventstream id=%s", s["id"])
-                return s["id"]
+def rpc(session, method, params=None):
+    resp = session.post(PALADIN_URL, json={
+        "jsonrpc": "2.0", "id": 1,
+        "method": method,
+        "params": params or [],
+    }, timeout=10)
     resp.raise_for_status()
     data = resp.json()
-    log.info("created eventstream id=%s", data["id"])
-    return data["id"]
+    if "error" in data:
+        raise RuntimeError(f"RPC error {method}: {data['error']}")
+    return data.get("result")
 
 
-def poll_events(session: requests.Session, stream_id: str, after: str = "") -> tuple[list, str]:
-    params = {"limit": 50}
-    if after:
-        params["after"] = after
-    resp = session.get(f"{PALADIN_URL}/api/v1/eventstreams/{stream_id}/events", params=params)
-    if resp.status_code == 200:
-        events = resp.json()
-        new_after = events[-1]["id"] if events else after
-        return events, new_after
-    return [], after
+def topic_for(receipt):
+    domain = (receipt.get("domain") or "").lower()
+    return DOMAIN_TOPIC.get(domain, "cbdc.tx.confirmed")
 
 
 def main():
-    producer = KafkaProducer(
-        bootstrap_servers=KAFKA_BROKERS.split(","),
-        value_serializer=lambda v: json.dumps(v).encode(),
-        acks="all",                # wait all replicas acknowledge
-        retries=5,
-    )
+    # Connect Kafka with retry
+    producer = None
+    while producer is None:
+        try:
+            producer = KafkaProducer(
+                bootstrap_servers=KAFKA_BROKERS.split(","),
+                value_serializer=lambda v: json.dumps(v).encode(),
+                acks="all",
+                retries=5,
+            )
+            log.info("Kafka connected to %s", KAFKA_BROKERS)
+        except Exception as e:
+            log.warning("Kafka not ready: %s — retrying in 5s", e)
+            time.sleep(5)
+
     session = requests.Session()
     session.headers.update({"Content-Type": "application/json"})
 
-    # retry until Paladin ready
-    stream_id = None
-    while not stream_id:
+    # Wait for Paladin
+    while True:
         try:
-            stream_id = create_eventstream(session)
+            result = rpc(session, "transport_nodeName")
+            log.info("Paladin ready. Node: %s", result)
+            break
         except Exception as e:
             log.warning("Paladin not ready: %s — retrying in 5s", e)
             time.sleep(5)
 
     log.info("Bridge running. Polling every %dms", POLL_INTERVAL)
-    after = ""
+    last_seq = 0
+
     while True:
         try:
-            events, after = poll_events(session, stream_id, after)
-            for ev in events:
-                topic = topic_for(ev)
-                producer.send(topic, value=ev)
-                log.debug("→ %s txHash=%s", topic, ev.get("transactionHash", ""))
-            if events:
+            receipts = rpc(session, "ptx_queryTransactionReceipts", [{
+                "limit": 50,
+                "gt": [{"field": "sequence", "value": last_seq}],
+                "sort": ["sequence"],
+            }])
+            if not receipts:
+                receipts = []
+
+            for r in receipts:
+                if not r.get("success"):
+                    continue
+                seq = r.get("sequence", 0)
+                topic = topic_for(r)
+                producer.send(topic, value=r)
+                log.info("→ %s seq=%d txHash=%s", topic, seq, r.get("transactionHash", "")[:16])
+                if seq > last_seq:
+                    last_seq = seq
+
+            if receipts:
                 producer.flush()
+
         except Exception as e:
             log.error("poll error: %s", e)
+
         time.sleep(POLL_INTERVAL / 1000)
 
 
