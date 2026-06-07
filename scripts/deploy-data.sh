@@ -29,16 +29,17 @@ helm upgrade --install postgres bitnami/postgresql \
   --wait --timeout 300s
 
 # MinIO (off-chain encrypted document storage)
-# Clean up stuck post-job from any prior failed upgrade
-kubectl delete job minio-post-job -n minio --ignore-not-found=true 2>/dev/null || true
-# Rollback failed release so upgrade can proceed cleanly
-if helm status minio -n minio 2>/dev/null | grep -q "STATUS: failed"; then
-  helm rollback minio -n minio 2>/dev/null || true
+# Skip upgrade if pod already running — post-upgrade hook is broken on this chart version
+MINIO_READY=$(kubectl get pods -n minio -l release=minio \
+  --no-headers -o custom-columns=STATUS:.status.phase 2>/dev/null | head -1)
+if [[ "$MINIO_READY" == "Running" ]]; then
+  echo "MinIO pod already Running — skipping helm upgrade"
+else
+  kubectl create namespace minio --dry-run=client -o yaml | kubectl apply -f -
+  helm upgrade --install minio minio/minio \
+    --namespace minio \
+    --values "${ROOT_DIR}/data/minio/minio-values.yaml" \
+    --wait --timeout 300s
 fi
-helm upgrade --install minio minio/minio \
-  --namespace minio \
-  --create-namespace \
-  --values "${ROOT_DIR}/data/minio/minio-values.yaml" \
-  --wait --timeout 300s
 
 echo "Data layer ready (postgres + minio)"
