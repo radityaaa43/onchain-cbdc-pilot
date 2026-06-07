@@ -87,7 +87,7 @@ kubectl apply -f platform/argocd/root-app.yaml
 # not in ArgoCD's embedded OpenAPI schema). ServerSideDiff uses the k8s API server's
 # schema which knows the field, so the comparison succeeds.
 kubectl patch configmap argocd-cm -n argocd --type merge -p \
-  '{"data":{"resource.compareoptions":"serverSideDiff: true\n","resource.customizations":"apps/StatefulSet:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\n"}}' \
+  '{"data":{"resource.customizations":"apps/StatefulSet:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\napps/Deployment:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\n"}}' \
   2>/dev/null || true
 
 # ─── STEP 4: Vault ────────────────────────────────────────────────────────────
@@ -163,30 +163,26 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-# Apply additional node CRs for nodeCount > 1 (idempotent)
-if [[ "$NODE_COUNT" -gt 1 ]]; then
-  echo "Applying Besu+Paladin CRs for node2-${NODE_COUNT}..."
-  kubectl apply -f chain/crds/nodes.yaml
+# Operator devnet mode with nodeCount creates all nodes automatically.
+# Wait for all Paladin nodes Ready.
+echo "Waiting for all Paladin nodes Ready (max 5 min)..."
+for i in $(seq 1 30); do
+  READY_COUNT=$(kubectl get paladin -n paladin \
+    -o jsonpath='{.items[*].status.phase}' 2>/dev/null | tr ' ' '\n' | grep -c "Ready" || echo 0)
+  echo "  [$i/30] Paladin Ready: ${READY_COUNT}/${NODE_COUNT}"
+  [[ "$READY_COUNT" -ge "$NODE_COUNT" ]] && break
+  sleep 10
+done
 
-  echo "Waiting for all Paladin nodes Ready (max 5 min)..."
-  for i in $(seq 1 30); do
-    READY_COUNT=$(kubectl get paladin -n paladin \
-      -o jsonpath='{.items[*].status.phase}' 2>/dev/null | tr ' ' '\n' | grep -c "Ready" || echo 0)
-    echo "  [$i/30] Paladin Ready: ${READY_COUNT}/${NODE_COUNT}"
-    [[ "$READY_COUNT" -ge "$NODE_COUNT" ]] && break
-    sleep 10
-  done
-
-  # Fix race: Paladin may crash if its Besu wasn't ready on first start
-  for node in $(seq 2 "$NODE_COUNT"); do
-    POD_STATE=$(kubectl get pod "paladin-node${node}-0" -n paladin \
-      -o jsonpath='{.status.containerStatuses[?(@.name=="paladin")].state.waiting.reason}' 2>/dev/null || true)
-    if [[ "$POD_STATE" == "CrashLoopBackOff" ]]; then
-      echo "  Restarting paladin-node${node}-0 (CrashLoopBackOff — besu race)"
-      kubectl delete pod "paladin-node${node}-0" -n paladin --grace-period=0 --force 2>/dev/null || true
-    fi
-  done
-fi
+# Fix race: Paladin node may CrashLoopBackOff if its Besu wasn't ready on first start
+for node in $(seq 2 "$NODE_COUNT"); do
+  POD_STATE=$(kubectl get pod "paladin-node${node}-0" -n paladin \
+    -o jsonpath='{.status.containerStatuses[?(@.name=="paladin")].state.waiting.reason}' 2>/dev/null || true)
+  if [[ "$POD_STATE" == "CrashLoopBackOff" ]]; then
+    echo "  Restarting paladin-node${node}-0 (CrashLoopBackOff — besu race)"
+    kubectl delete pod "paladin-node${node}-0" -n paladin --grace-period=0 --force 2>/dev/null || true
+  fi
+done
 
 # Verify Paladin node1 JSON-RPC reachable
 echo "Verifying Paladin node1 JSON-RPC..."
