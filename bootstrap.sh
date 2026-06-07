@@ -89,6 +89,14 @@ kubectl wait deployment/strimzi-cluster-operator \
   --timeout=300s
 kubectl apply -f data/kafka/kafka-cluster-app.yaml
 
+echo "Waiting for Kafka cluster to be ready (max 5 min)..."
+kubectl wait kafka/kafka \
+  --namespace kafka \
+  --for=condition=Ready \
+  --timeout=300s 2>/dev/null || true
+
+kubectl apply -f data/kafka/kafka-topics.yaml
+
 kubectl apply -f data/scylla/scylla-app.yaml
 
 # ─── STEP 7: chain (Paladin + Besu) ──────────
