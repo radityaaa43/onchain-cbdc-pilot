@@ -66,14 +66,26 @@ kubectl wait application/vault \
   --namespace argocd \
   --for=jsonpath='{.status.sync.status}'=Synced \
   --timeout=300s 2>/dev/null || true
-echo "Waiting for vault pod to be ready..."
+echo "Waiting for vault pod to be Running (sealed state expected)..."
+for i in $(seq 1 60); do
+  STATUS=$(kubectl get pod -n vault -l app.kubernetes.io/name=vault \
+    --no-headers -o custom-columns=STATUS:.status.phase 2>/dev/null | head -1)
+  if [[ "$STATUS" == "Running" ]]; then
+    echo "  vault pod Running"
+    break
+  fi
+  echo "  [$i/60] vault pod status: ${STATUS:-pending}..."
+  sleep 5
+done
+
+bash secrets/vault/unseal-init.sh
+
+echo "Waiting for vault to be Ready after unseal..."
 kubectl wait pod \
   --selector app.kubernetes.io/name=vault \
   --namespace vault \
   --for=condition=Ready \
-  --timeout=300s
-
-bash secrets/vault/unseal-init.sh
+  --timeout=120s 2>/dev/null || true
 
 # ─── STEP 5: data layer ───────────────────────
 log "STEP 5: data layer (postgres + minio)"

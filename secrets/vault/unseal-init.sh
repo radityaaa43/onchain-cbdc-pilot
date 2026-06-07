@@ -1,42 +1,55 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
 NS=${VAULT_NAMESPACE:-vault}
-VAULT_ADDR_INTERNAL=${VAULT_ADDR:-"http://127.0.0.1:8200"}
+VAULT_ADDR_INTERNAL="http://127.0.0.1:8200"
 KEYS_FILE="vault-keys.json"
 
-echo "[INFO] Getting vault pod in namespace: $NS"
+echo "[vault] Looking for pod in namespace: $NS"
 POD=$(kubectl get pods -l app.kubernetes.io/name=vault -n "$NS" \
-  -o custom-columns=":metadata.name" --no-headers 2>/dev/null | head -1)
+  --no-headers -o custom-columns=":metadata.name" 2>/dev/null | head -1)
 
-if [ -z "$POD" ]; then
-  echo "[ERROR] No vault pod found in namespace $NS" >&2
+if [[ -z "$POD" ]]; then
+  echo "[vault] ERROR: No vault pod found in namespace $NS" >&2
   exit 1
 fi
-echo "[INFO] Found pod: $POD"
+echo "[vault] Pod: $POD"
 
-echo "[INFO] Initializing vault (1 key share, threshold 1)..."
-kubectl exec "$POD" -n "$NS" -- sh -c \
-  "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault operator init -key-shares=1 -key-threshold=1 -format=json" \
-  > "$KEYS_FILE"
+# Check initialized state
+INIT_STATUS=$(kubectl exec "$POD" -n "$NS" -- sh -c \
+  "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault status -format=json 2>/dev/null || echo '{}'" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d.get('initialized','false')).lower())" 2>/dev/null || echo "false")
 
-echo "[INFO] Saved keys to $KEYS_FILE"
+if [[ "$INIT_STATUS" != "true" ]]; then
+  echo "[vault] Initializing (1 key share, threshold 1)..."
+  kubectl exec "$POD" -n "$NS" -- sh -c \
+    "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault operator init -key-shares=1 -key-threshold=1 -format=json" \
+    > "$KEYS_FILE"
+  echo "[vault] Keys saved to $KEYS_FILE"
+else
+  echo "[vault] Already initialized. Using existing $KEYS_FILE"
+  if [[ ! -f "$KEYS_FILE" ]]; then
+    echo "[vault] ERROR: vault initialized but $KEYS_FILE missing — cannot unseal" >&2
+    exit 1
+  fi
+fi
 
-UNSEAL_KEY=$(jq -r '.unseal_keys_b64[0]' "$KEYS_FILE")
-ROOT_TOKEN=$(jq -r '.root_token' "$KEYS_FILE")
+# Unseal if sealed
+SEAL_STATUS=$(kubectl exec "$POD" -n "$NS" -- sh -c \
+  "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault status -format=json 2>/dev/null || echo '{}'" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(str(d.get('sealed','true')).lower())" 2>/dev/null || echo "true")
 
-echo "[INFO] Unsealing vault..."
-kubectl exec "$POD" -n "$NS" -- sh -c \
-  "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault operator unseal $UNSEAL_KEY"
+if [[ "$SEAL_STATUS" == "true" ]]; then
+  UNSEAL_KEY=$(python3 -c "import json; d=json.load(open('$KEYS_FILE')); print(d['unseal_keys_b64'][0])")
+  echo "[vault] Unsealing..."
+  kubectl exec "$POD" -n "$NS" -- sh -c \
+    "VAULT_ADDR=$VAULT_ADDR_INTERNAL vault operator unseal $UNSEAL_KEY"
+  echo "[vault] Unsealed."
+else
+  echo "[vault] Already unsealed."
+fi
 
-export ROOT_TOKEN
+ROOT_TOKEN=$(python3 -c "import json; print(json.load(open('$KEYS_FILE'))['root_token'])")
 echo ""
-echo "[INFO] Vault initialized and unsealed."
-echo "[INFO] Root token exported as ROOT_TOKEN"
-echo ""
+echo "[vault] Ready. Root token: ${ROOT_TOKEN:0:8}..."
 echo "  VAULT_TOKEN=$ROOT_TOKEN"
-echo ""
-echo "Next steps:"
-echo "  1. Store $KEYS_FILE in a secure location."
-echo "  2. Set VAULT_TOKEN=\$ROOT_TOKEN before running vault CLI commands."
-echo "  3. Run: kubectl exec $POD -n $NS -- sh -c 'VAULT_ADDR=$VAULT_ADDR_INTERNAL VAULT_TOKEN=$ROOT_TOKEN vault status'"
