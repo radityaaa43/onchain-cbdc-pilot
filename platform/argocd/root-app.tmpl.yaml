@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: onchain-org-stack
+  name: onchain-cbdc-pilot
   namespace: argocd
 spec:
   project: default
