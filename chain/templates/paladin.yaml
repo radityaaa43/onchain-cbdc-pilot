@@ -40,6 +40,10 @@ spec:
           besuGenesis:
             chainID: {{ .Values.besu.chainId }}
   ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /status/terminatingReplicas
     - group: core.paladin.io
       kind: Paladin
       jsonPointers:
