@@ -119,11 +119,23 @@ kubectl wait deployment/strimzi-cluster-operator \
 
 kubectl apply -f data/kafka/kafka-cluster-app.yaml
 
-echo "Waiting for Kafka cluster to be ready (max 5 min)..."
-kubectl wait kafka/kafka \
+echo "Waiting for Kafka cluster to be ready (max 10 min)..."
+for i in $(seq 1 60); do
+  READY=$(kubectl get kafka kafka -n kafka \
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
+  if [[ "$READY" == "True" ]]; then
+    echo "  Kafka cluster Ready"
+    break
+  fi
+  echo "  [$i/60] Kafka status: ${READY:-pending}..."
+  sleep 10
+done
+
+echo "Waiting for entity operator to be ready..."
+kubectl wait deployment/kafka-entity-operator \
   --namespace kafka \
-  --for=condition=Ready \
-  --timeout=300s 2>/dev/null || true
+  --for=condition=Available \
+  --timeout=120s 2>/dev/null || true
 
 kubectl apply -f data/kafka/kafka-topics.yaml
 
