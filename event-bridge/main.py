@@ -14,18 +14,40 @@ PALADIN_URL   = os.environ.get("PALADIN_URL", "http://paladin-node1.paladin.svc:
 KAFKA_BROKERS = os.environ.get("KAFKA_BROKERS", "kafka-controller.kafka.svc:9092")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_MS", "500"))
 
+# Event signature → Kafka topic
+# Sources: CBToken, FixedIncomeToken, DVPService (all deployed in Pente group)
 TOPIC_MAP = {
-    "PenteTransition": "cbdc.tx.confirmed",
-    "NotoTransfer":    "cbdc.transfer",
-    "NotoMint":        "cbdc.mint",
+    # CBDC lifecycle
+    "Transfer(address,address,uint256)":                            "cbdc.transfer",
+    "CBDCTransferred(address,address,uint256)":                     "cbdc.transfer",
+    "Issued(address,address,uint256,bytes)":                        "cbdc.mint",      # CBToken mint
+    "IssuedByPartition(bytes32,address,address,uint256,bytes,bytes)": "cbdc.mint",    # bond issuance
+
+    # DVP settlement
+    "DVPSettlementConfirmed(bytes32)":                              "cbdc.tx.confirmed",
+    "DVPSettlementInitiated(bytes32,bytes32,address,address,uint256,uint256)": "cbdc.tx.confirmed",
+
+    # Bond lifecycle
+    "TransferByPartition(bytes32,address,address,address,uint256,bytes,bytes)": "cbdc.transfer",
+    "ChangedPartition(bytes32,bytes32,uint256)":                    "cbdc.audit",
+
+    # Failures & audit
+    "DVPSettlementFailed(bytes32,string)":                          "cbdc.audit",
+    "DVPSettlementCancelled(bytes32,string)":                       "cbdc.audit",
+    "RedeemedByPartition(bytes32,address,address,uint256,bytes)":   "cbdc.audit",
 }
 AUDIT_TOPIC = "cbdc.audit"
 
 
 def topic_for(event: dict) -> str:
     sig = event.get("signature", "")
+    # exact match first
+    if sig in TOPIC_MAP:
+        return TOPIC_MAP[sig]
+    # prefix match on event name (before first '(')
+    name = sig.split("(")[0]
     for k, t in TOPIC_MAP.items():
-        if k in sig:
+        if k.startswith(name + "("):
             return t
     return AUDIT_TOPIC
 

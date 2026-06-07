@@ -4,3 +4,9 @@ debug.log
 *.secret.yaml
 .env.local
 vault-keys.json
+
+# Hardhat
+node_modules/
+artifacts/
+cache/
+typechain-types/
