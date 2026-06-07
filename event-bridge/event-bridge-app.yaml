@@ -1,3 +1,108 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cbdc-event-bridge-code
+  namespace: paladin
+data:
+  main.py: |
+    #!/usr/bin/env python3
+    import os, json, time, logging
+    import requests
+    from kafka import KafkaProducer
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    log = logging.getLogger("event-bridge")
+
+    PALADIN_URL   = os.environ.get("PALADIN_URL", "http://paladin-node1.paladin.svc:8548")
+    KAFKA_BROKERS = os.environ.get("KAFKA_BROKERS", "kafka-controller.kafka.svc:9092")
+    POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_MS", "500"))
+
+    TOPIC_MAP = {
+        "Transfer(address,address,uint256)":                               "cbdc.transfer",
+        "CBDCTransferred(address,address,uint256)":                        "cbdc.transfer",
+        "Issued(address,address,uint256,bytes)":                           "cbdc.mint",
+        "IssuedByPartition(bytes32,address,address,uint256,bytes,bytes)":  "cbdc.mint",
+        "DVPSettlementConfirmed(bytes32)":                                 "cbdc.tx.confirmed",
+        "DVPSettlementInitiated(bytes32,bytes32,address,address,uint256,uint256)": "cbdc.tx.confirmed",
+        "TransferByPartition(bytes32,address,address,address,uint256,bytes,bytes)": "cbdc.transfer",
+        "ChangedPartition(bytes32,bytes32,uint256)":                       "cbdc.audit",
+        "DVPSettlementFailed(bytes32,string)":                             "cbdc.audit",
+        "DVPSettlementCancelled(bytes32,string)":                          "cbdc.audit",
+        "RedeemedByPartition(bytes32,address,address,uint256,bytes)":      "cbdc.audit",
+    }
+    AUDIT_TOPIC = "cbdc.audit"
+
+    def topic_for(event):
+        sig = event.get("signature", "")
+        if sig in TOPIC_MAP:
+            return TOPIC_MAP[sig]
+        name = sig.split("(")[0]
+        for k, t in TOPIC_MAP.items():
+            if k.startswith(name + "("):
+                return t
+        return AUDIT_TOPIC
+
+    def create_eventstream(session):
+        resp = session.post(f"{PALADIN_URL}/api/v1/eventstreams", json={
+            "name": "cbdc-bridge", "type": "webhook",
+            "batchSize": 50, "batchTimeout": "500ms",
+        })
+        if resp.status_code in (200, 409):
+            streams = session.get(f"{PALADIN_URL}/api/v1/eventstreams").json()
+            for s in streams:
+                if s.get("name") == "cbdc-bridge":
+                    log.info("eventstream id=%s", s["id"])
+                    return s["id"]
+        resp.raise_for_status()
+        data = resp.json()
+        log.info("created eventstream id=%s", data["id"])
+        return data["id"]
+
+    def poll_events(session, stream_id, after=""):
+        params = {"limit": 50}
+        if after:
+            params["after"] = after
+        resp = session.get(f"{PALADIN_URL}/api/v1/eventstreams/{stream_id}/events", params=params)
+        if resp.status_code == 200:
+            events = resp.json()
+            new_after = events[-1]["id"] if events else after
+            return events, new_after
+        return [], after
+
+    def main():
+        producer = KafkaProducer(
+            bootstrap_servers=KAFKA_BROKERS.split(","),
+            value_serializer=lambda v: json.dumps(v).encode(),
+            acks="all", retries=5,
+        )
+        session = requests.Session()
+        session.headers.update({"Content-Type": "application/json"})
+        stream_id = None
+        while not stream_id:
+            try:
+                stream_id = create_eventstream(session)
+            except Exception as e:
+                log.warning("Paladin not ready: %s — retrying in 5s", e)
+                time.sleep(5)
+        log.info("Bridge running. Polling every %dms", POLL_INTERVAL)
+        after = ""
+        while True:
+            try:
+                events, after = poll_events(session, stream_id, after)
+                for ev in events:
+                    topic = topic_for(ev)
+                    producer.send(topic, value=ev)
+                    log.debug("→ %s txHash=%s", topic, ev.get("transactionHash", ""))
+                if events:
+                    producer.flush()
+            except Exception as e:
+                log.error("poll error: %s", e)
+            time.sleep(POLL_INTERVAL / 1000)
+
+    if __name__ == "__main__":
+        main()
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -13,10 +118,20 @@ spec:
       labels:
         app: cbdc-event-bridge
     spec:
+      initContainers:
+        - name: install-deps
+          image: python:3.11-slim
+          command: ["pip", "install", "--target=/deps", "requests", "kafka-python"]
+          volumeMounts:
+            - name: deps
+              mountPath: /deps
       containers:
         - name: event-bridge
-          image: ghcr.io/radityaaa43/cbdc-event-bridge:latest
+          image: python:3.11-slim
+          command: ["python", "/app/main.py"]
           env:
+            - name: PYTHONPATH
+              value: "/deps"
             - name: PALADIN_URL
               value: "http://paladin-node1.paladin.svc:8548"
             - name: KAFKA_BROKERS
@@ -26,15 +141,21 @@ spec:
           resources:
             limits:
               cpu: "0.2"
-              memory: 128Mi
+              memory: 256Mi
             requests:
               cpu: "0.1"
-              memory: 64Mi
-          livenessProbe:
-            exec:
-              command: ["python", "-c", "import os; os.path.exists('/tmp/alive')"]
-            initialDelaySeconds: 30
-            periodSeconds: 30
+              memory: 128Mi
+          volumeMounts:
+            - name: code
+              mountPath: /app
+            - name: deps
+              mountPath: /deps
+      volumes:
+        - name: code
+          configMap:
+            name: cbdc-event-bridge-code
+        - name: deps
+          emptyDir: {}
       nodeSelector:
         kubernetes.io/arch: amd64
       restartPolicy: Always
