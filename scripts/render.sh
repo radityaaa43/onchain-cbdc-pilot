@@ -45,6 +45,7 @@ pairs = [
     ("ORG_NAME",              org.get("name", "")),
     ("ORG_DOMAIN",            org.get("domain", "")),
     ("ORG_EMAIL",             org.get("email", "")),
+    ("ORG_KEY",               org.get("signingKey", "0x75a99473917701038e854ef6999c76cd947c9f9e")),
     ("ARCH",                  c.get("arch", "amd64")),
     ("BESU_CHAIN_ID",         str(besu.get("chainId", 1337))),
     ("BESU_NODE_COUNT",       str(besu.get("nodeCount", 1))),

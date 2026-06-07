@@ -9,6 +9,7 @@ org:
   name: org1
   domain: org1.cluster.local
   email: admin@org1.example
+  signingKey: "0x75a99473917701038e854ef6999c76cd947c9f9e"  # FireFly org key — Besu dev account
 
 repo:
   url: https://github.com/radityaaa43/onchain-org-stack

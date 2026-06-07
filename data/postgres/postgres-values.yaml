@@ -10,5 +10,5 @@ primary:
   initdb:
     scripts:
       init.sql: |
-        CREATE DATABASE IF NOT EXISTS firefly;
-        CREATE DATABASE IF NOT EXISTS paladin;
+        CREATE DATABASE firefly;
+        CREATE DATABASE paladin;
