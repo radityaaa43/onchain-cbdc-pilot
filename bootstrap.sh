@@ -148,7 +148,7 @@ kubectl apply -f chain/paladin-app.yaml
 echo "Waiting for Besu to produce blocks (max 5 min)..."
 BESU_POD=""
 for i in $(seq 1 30); do
-  BESU_POD=$(kubectl get pod -n paladin -l app.kubernetes.io/name=besu --no-headers -o name 2>/dev/null | head -1 || true)
+  BESU_POD=$(kubectl get pod -n paladin -l app=besu --no-headers -o name 2>/dev/null | head -1 || true)
   if [[ -n "$BESU_POD" ]]; then
     break
   fi
