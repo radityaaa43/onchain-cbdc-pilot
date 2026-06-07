@@ -27,6 +27,7 @@ CHAIN_ID=""
 BESU_PORT=""
 PALADIN_PORT=""
 NODE_COUNT=""
+CHAIN_INFO_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -38,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --besu-port)    BESU_PORT="$2"; shift 2 ;;
     --paladin-port) PALADIN_PORT="$2"; shift 2 ;;
     --node-count)   NODE_COUNT="$2"; shift 2 ;;
+    --chain-info)   CHAIN_INFO_FILE="$2"; shift 2 ;;  # join org1's chain as validator
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -114,7 +116,11 @@ if node_count:
     c["besu"]["nodeCount"] = int(node_count)
 
 # standalone by default
-c["crossOrg"]["mode"] = "standalone"
+chain_info_file = "$CHAIN_INFO_FILE"
+if chain_info_file:
+    c["crossOrg"]["mode"] = "shared-chain-group"
+else:
+    c["crossOrg"]["mode"] = "standalone"
 c["crossOrg"]["peers"] = []
 
 with open(config_path, "w") as f:
@@ -123,9 +129,21 @@ with open(config_path, "w") as f:
 print("  config.yaml updated.")
 PYEOF
 
+# Copy chain-info.json if provided (join-chain mode)
+if [[ -n "$CHAIN_INFO_FILE" ]]; then
+  if [[ ! -f "$CHAIN_INFO_FILE" ]]; then
+    echo "ERROR: --chain-info file not found: $CHAIN_INFO_FILE"
+    exit 1
+  fi
+  cp "$CHAIN_INFO_FILE" "$DEST_DIR/chain-info.json"
+  echo "  chain-info.json copied → $DEST_DIR/chain-info.json"
+fi
+
 echo ""
 echo "Committing config to local repo ..."
-git -C "$DEST_DIR" add config.yaml
+COMMIT_FILES=(config.yaml)
+[[ -n "$CHAIN_INFO_FILE" ]] && COMMIT_FILES+=(chain-info.json)
+git -C "$DEST_DIR" add "${COMMIT_FILES[@]}"
 git -C "$DEST_DIR" commit -m "chore: configure org ${ORG_NAME}"
 
 echo ""
@@ -144,7 +162,14 @@ echo "  2. Point kubectl at the new cluster:"
 echo "       export KUBECONFIG=/path/to/${ORG_NAME}-kubeconfig"
 echo ""
 echo "  3. Bootstrap:"
-echo "       cd $DEST_DIR && bash bootstrap.sh"
+if [[ -n "$CHAIN_INFO_FILE" ]]; then
+  echo "       cd $DEST_DIR && bash bootstrap.sh --chain-info chain-info.json --org1-ip <org1-ip>"
+  echo ""
+  echo "  4. After bootstrap, on org1 machine — vote to add org2 as validator:"
+  echo "       bash scripts/vote-add-validator.sh --address <org2-validator-addr-from-join-chain-output>"
+else
+  echo "       cd $DEST_DIR && bash bootstrap.sh"
+fi
 echo ""
 echo "  NodePorts (on new cluster — no conflict):"
 BPORT="${BESU_PORT:-31545}"

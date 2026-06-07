@@ -8,9 +8,13 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────────────────────
 
 SKIP_CONTRACTS=false
+CHAIN_INFO=""
+ORG1_IP=""
 for arg in "$@"; do
   case $arg in
     --skip-contracts) SKIP_CONTRACTS=true ;;
+    --chain-info)     shift; CHAIN_INFO="$1" ;;
+    --org1-ip)        shift; ORG1_IP="$1" ;;
   esac
 done
 
@@ -57,6 +61,7 @@ ORG_DOMAIN=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); pri
 NODE_COUNT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['besu'].get('nodeCount',1))")
 BESU_BASE_PORT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['besu'].get('baseNodePort',31545))")
 PALADIN_BASE_PORT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['paladin'].get('baseNodePort',31548))")
+CROSS_ORG_MODE=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c.get('crossOrg',{}).get('mode','standalone'))")
 
 echo "Org: $ORG_NAME  Domain: $ORG_DOMAIN  Nodes: $NODE_COUNT"
 
@@ -141,59 +146,79 @@ kubectl wait deployment/kafka-entity-operator \
 kubectl apply -f data/kafka/kafka-topics.yaml
 
 # ─── STEP 7: chain (Besu QBFT + Paladin) ─────────────────────────────────────
-log "STEP 7: chain — Besu QBFT + Paladin (nodeCount=${NODE_COUNT})"
-kubectl apply -f chain/paladin-app.yaml
+if [[ "$CROSS_ORG_MODE" == "shared-chain-group" ]]; then
+  # ─── STEP 7 (JOIN MODE): join org1's existing chain as validator ────────────
+  log "STEP 7: Join org1's chain (crossOrg.mode=shared-chain-group)"
 
-echo "Waiting for Besu pod (max 5 min)..."
-for i in $(seq 1 30); do
-  BESU_POD=$(kubectl get pod -n paladin -l app=besu --no-headers -o name 2>/dev/null | head -1 || true)
-  [[ -n "$BESU_POD" ]] && break
-  echo "  [$i/30] waiting for besu pod..."; sleep 10
-done
-
-echo "Waiting for Besu to produce blocks (max 5 min)..."
-for i in $(seq 1 60); do
-  BLOCK_HEX=$(curl -sf --max-time 3 -X POST "http://localhost:${BESU_BASE_PORT}" \
-    -H 'Content-Type: application/json' \
-    -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-    2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result','0x0'))" 2>/dev/null || echo "0x0")
-  BLOCK_NUM=$(python3 -c "print(int('$BLOCK_HEX', 16))" 2>/dev/null || echo 0)
-  echo "  [$i/60] block: $BLOCK_NUM"
-  [[ "$BLOCK_NUM" -gt 0 ]] && echo "  Besu producing blocks." && break
-  sleep 5
-done
-
-# Operator devnet mode with nodeCount creates all nodes automatically.
-# Wait for all Paladin nodes Ready.
-echo "Waiting for all Paladin nodes Ready (max 5 min)..."
-for i in $(seq 1 30); do
-  READY_COUNT=$(kubectl get paladin -n paladin \
-    -o jsonpath='{.items[*].status.phase}' 2>/dev/null | tr ' ' '\n' | grep -c "Ready" || echo 0)
-  echo "  [$i/30] Paladin Ready: ${READY_COUNT}/${NODE_COUNT}"
-  [[ "$READY_COUNT" -ge "$NODE_COUNT" ]] && break
-  sleep 10
-done
-
-# Fix race: Paladin node may CrashLoopBackOff if its Besu wasn't ready on first start
-for node in $(seq 2 "$NODE_COUNT"); do
-  POD_STATE=$(kubectl get pod "paladin-node${node}-0" -n paladin \
-    -o jsonpath='{.status.containerStatuses[?(@.name=="paladin")].state.waiting.reason}' 2>/dev/null || true)
-  if [[ "$POD_STATE" == "CrashLoopBackOff" ]]; then
-    echo "  Restarting paladin-node${node}-0 (CrashLoopBackOff — besu race)"
-    kubectl delete pod "paladin-node${node}-0" -n paladin --grace-period=0 --force 2>/dev/null || true
+  if [[ -z "$CHAIN_INFO" ]]; then
+    echo "ERROR: crossOrg.mode=shared-chain-group requires --chain-info <file>"
+    echo "Run on org1: bash scripts/export-chain-info.sh --host <org1-ip> --output chain-info.json"
+    echo "Then: bash bootstrap.sh --chain-info chain-info.json --org1-ip <org1-ip>"
+    exit 1
   fi
-done
 
-# Verify Paladin node1 JSON-RPC reachable
-echo "Verifying Paladin node1 JSON-RPC..."
-for i in $(seq 1 12); do
-  PALADIN_NODE=$(curl -sf --max-time 3 -X POST "http://localhost:${PALADIN_BASE_PORT}" \
-    -H 'Content-Type: application/json' \
-    -d '{"jsonrpc":"2.0","id":1,"method":"transport_nodeName","params":[]}' \
-    2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',''))" 2>/dev/null || true)
-  [[ -n "$PALADIN_NODE" ]] && echo "  Paladin node1 ready: $PALADIN_NODE" && break
-  echo "  [$i/12] Paladin not ready yet..."; sleep 10
-done
+  JOIN_ARGS=(--chain-info "$CHAIN_INFO" --node-name "$ORG_NAME" \
+    --besu-nodeport "$BESU_BASE_PORT" --paladin-nodeport "$PALADIN_BASE_PORT")
+  [[ -n "$ORG1_IP" ]] && JOIN_ARGS+=(--org1-ip "$ORG1_IP")
+
+  bash scripts/join-chain.sh "${JOIN_ARGS[@]}"
+
+else
+  # ─── STEP 7 (DEVNET MODE): create new chain via paladin-operator ────────────
+  log "STEP 7: chain — Besu QBFT + Paladin (nodeCount=${NODE_COUNT})"
+  kubectl apply -f chain/paladin-app.yaml
+
+  echo "Waiting for Besu pod (max 5 min)..."
+  for i in $(seq 1 30); do
+    BESU_POD=$(kubectl get pod -n paladin -l app=besu --no-headers -o name 2>/dev/null | head -1 || true)
+    [[ -n "$BESU_POD" ]] && break
+    echo "  [$i/30] waiting for besu pod..."; sleep 10
+  done
+
+  echo "Waiting for Besu to produce blocks (max 5 min)..."
+  for i in $(seq 1 60); do
+    BLOCK_HEX=$(curl -sf --max-time 3 -X POST "http://localhost:${BESU_BASE_PORT}" \
+      -H 'Content-Type: application/json' \
+      -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
+      2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result','0x0'))" 2>/dev/null || echo "0x0")
+    BLOCK_NUM=$(python3 -c "print(int('$BLOCK_HEX', 16))" 2>/dev/null || echo 0)
+    echo "  [$i/60] block: $BLOCK_NUM"
+    [[ "$BLOCK_NUM" -gt 0 ]] && echo "  Besu producing blocks." && break
+    sleep 5
+  done
+
+  # Operator devnet mode with nodeCount creates all nodes automatically.
+  # Wait for all Paladin nodes Ready.
+  echo "Waiting for all Paladin nodes Ready (max 5 min)..."
+  for i in $(seq 1 30); do
+    READY_COUNT=$(kubectl get paladin -n paladin \
+      -o jsonpath='{.items[*].status.phase}' 2>/dev/null | tr ' ' '\n' | grep -c "Ready" || echo 0)
+    echo "  [$i/30] Paladin Ready: ${READY_COUNT}/${NODE_COUNT}"
+    [[ "$READY_COUNT" -ge "$NODE_COUNT" ]] && break
+    sleep 10
+  done
+
+  # Fix race: Paladin node may CrashLoopBackOff if its Besu wasn't ready on first start
+  for node in $(seq 2 "$NODE_COUNT"); do
+    POD_STATE=$(kubectl get pod "paladin-node${node}-0" -n paladin \
+      -o jsonpath='{.status.containerStatuses[?(@.name=="paladin")].state.waiting.reason}' 2>/dev/null || true)
+    if [[ "$POD_STATE" == "CrashLoopBackOff" ]]; then
+      echo "  Restarting paladin-node${node}-0 (CrashLoopBackOff — besu race)"
+      kubectl delete pod "paladin-node${node}-0" -n paladin --grace-period=0 --force 2>/dev/null || true
+    fi
+  done
+
+  # Verify Paladin node1 JSON-RPC reachable
+  echo "Verifying Paladin node1 JSON-RPC..."
+  for i in $(seq 1 12); do
+    PALADIN_NODE=$(curl -sf --max-time 3 -X POST "http://localhost:${PALADIN_BASE_PORT}" \
+      -H 'Content-Type: application/json' \
+      -d '{"jsonrpc":"2.0","id":1,"method":"transport_nodeName","params":[]}' \
+      2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',''))" 2>/dev/null || true)
+    [[ -n "$PALADIN_NODE" ]] && echo "  Paladin node1 ready: $PALADIN_NODE" && break
+    echo "  [$i/12] Paladin not ready yet..."; sleep 10
+  done
+fi
 
 # ─── STEP 8: event bridge ─────────────────────────────────────────────────────
 log "STEP 8: Event Bridge (Paladin → Kafka)"
