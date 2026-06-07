@@ -1,0 +1,21 @@
+architecture: standalone
+
+auth:
+  enabled: false   # internal cluster-only, no external exposure
+
+master:
+  persistence:
+    enabled: true
+    size: 1Gi
+
+service:
+  type: ClusterIP
+  port: 6379
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

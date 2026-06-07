@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # onchain-cbdc-pilot bootstrap
-# Usage: bash bootstrap.sh
-# Requires: kubectl, helm, git, python3+pyyaml
-# ─────────────────────────────────────────────
+# Usage: bash bootstrap.sh [--skip-firefly] [--skip-contracts]
+# Requires: kubectl, helm, git, python3+pyyaml, curl
+# ─────────────────────────────────────────────────────────────────────────────
+
+SKIP_FIREFLY=false
+SKIP_CONTRACTS=false
+for arg in "$@"; do
+  case $arg in
+    --skip-firefly)   SKIP_FIREFLY=true ;;
+    --skip-contracts) SKIP_CONTRACTS=true ;;
+  esac
+done
 
 log() {
   echo ""
@@ -14,204 +23,261 @@ log() {
   echo "════════════════════════════════════════════════"
 }
 
+wait_app_synced() {
+  local app="$1"
+  local timeout="${2:-300}"
+  echo "Waiting for ArgoCD app '$app' (${timeout}s max)..."
+  local end=$((SECONDS + timeout))
+  while [[ $SECONDS -lt $end ]]; do
+    STATUS=$(kubectl get application "$app" -n argocd \
+      -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "")
+    HEALTH=$(kubectl get application "$app" -n argocd \
+      -o jsonpath='{.status.health.status}' 2>/dev/null || echo "")
+    if [[ "$STATUS" == "Synced" && "$HEALTH" == "Healthy" ]]; then
+      echo "  '$app' Synced/Healthy"; return 0
+    fi
+    echo "  '$app' sync=$STATUS health=$HEALTH ..."; sleep 10
+  done
+  echo "  WARNING: '$app' not Synced/Healthy within ${timeout}s (continuing)"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ─── Pre-flight ───────────────────────────────
-log "RENDER: generating derived manifests from config.yaml"
+# ─── Pre-flight ───────────────────────────────────────────────────────────────
+log "PRE-FLIGHT: render config.yaml → derived manifests"
 bash scripts/render.sh --write
 
 git add -A
 if ! git diff --cached --quiet; then
   git commit -m "chore: rendered manifests from config.yaml"
+  git push origin HEAD 2>/dev/null || true
 fi
 
-ORG_DOMAIN="${ORG_DOMAIN:-$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['org']['domain'])")}"
-BESU_NODE_PORT="${BESU_NODE_PORT:-$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['besu']['baseNodePort'])")}"
+ORG_NAME=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['org']['name'])")
+ORG_DOMAIN=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['org']['domain'])")
+NODE_COUNT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['besu'].get('nodeCount',1))")
+BESU_BASE_PORT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['besu'].get('baseNodePort',31545))")
+PALADIN_BASE_PORT=$(python3 -c "import yaml; c=yaml.safe_load(open('config.yaml')); print(c['paladin'].get('baseNodePort',31548))")
 
-# ─── STEP 1: cert-manager ─────────────────────
+echo "Org: $ORG_NAME  Domain: $ORG_DOMAIN  Nodes: $NODE_COUNT"
+
+# ─── STEP 1: cert-manager ─────────────────────────────────────────────────────
 log "STEP 1: cert-manager"
-helm repo add jetstack https://charts.jetstack.io --force-update
-helm repo update jetstack
+helm repo add jetstack https://charts.jetstack.io --force-update 2>/dev/null
+helm repo update jetstack 2>/dev/null
 helm upgrade --install cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --version v1.16.3 \
-  --set crds.enabled=true \
-  --wait
+  --namespace cert-manager --create-namespace \
+  --version v1.16.3 --set crds.enabled=true \
+  --wait --timeout 300s
 
-echo "Waiting for cert-manager webhook to be ready..."
 kubectl wait deployment/cert-manager-webhook \
-  --namespace cert-manager \
-  --for=condition=Available \
-  --timeout=120s
+  --namespace cert-manager --for=condition=Available --timeout=120s
 
 kubectl apply -f platform/cert-manager/cluster-issuers.yaml
 
-# ─── STEP 2: traefik config ───────────────────
-log "STEP 2: traefik config"
+# ─── STEP 2: traefik ──────────────────────────────────────────────────────────
+log "STEP 2: traefik"
 kubectl apply -f platform/traefik/traefik-config.yaml
 
-# ─── STEP 3: ArgoCD ───────────────────────────
+# ─── STEP 3: ArgoCD ───────────────────────────────────────────────────────────
 log "STEP 3: ArgoCD"
 bash platform/argocd/install.sh
 kubectl apply -f platform/argocd/root-app.yaml
 
-# ─── STEP 4: Vault ────────────────────────────
-log "STEP 4: Vault - deploy and unseal"
+# Prevent StatefulSet terminatingReplicas ComparisonError globally
+kubectl patch configmap argocd-cm -n argocd --type merge \
+  -p '{"data":{"resource.customizations":"apps/StatefulSet:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\n"}}' \
+  2>/dev/null || true
+
+# ─── STEP 4: Vault ────────────────────────────────────────────────────────────
+log "STEP 4: Vault — deploy and unseal"
 kubectl apply -f secrets/vault/vault-app.yaml
 
-echo "Waiting for ArgoCD to sync vault application..."
-kubectl wait application/vault \
-  --namespace argocd \
-  --for=jsonpath='{.status.sync.status}'=Synced \
-  --timeout=300s 2>/dev/null || true
-echo "Waiting for vault pod to be Running (sealed state expected)..."
+echo "Waiting for vault pod (max 5 min)..."
 for i in $(seq 1 60); do
   STATUS=$(kubectl get pod -n vault -l app.kubernetes.io/name=vault \
     --no-headers -o custom-columns=STATUS:.status.phase 2>/dev/null | head -1)
-  if [[ "$STATUS" == "Running" ]]; then
-    echo "  vault pod Running"
-    break
-  fi
-  echo "  [$i/60] vault pod status: ${STATUS:-pending}..."
-  sleep 5
+  if [[ "$STATUS" == "Running" ]]; then echo "  vault Running"; break; fi
+  echo "  [$i/60] vault: ${STATUS:-pending}..."; sleep 5
 done
 
 bash secrets/vault/unseal-init.sh
 
-echo "Waiting for vault to be Ready after unseal..."
-kubectl wait pod \
-  --selector app.kubernetes.io/name=vault \
-  --namespace vault \
-  --for=condition=Ready \
-  --timeout=120s 2>/dev/null || true
+kubectl wait pod --selector app.kubernetes.io/name=vault \
+  --namespace vault --for=condition=Ready --timeout=120s 2>/dev/null || true
 
-# ─── STEP 5: data layer ───────────────────────
-log "STEP 5: data layer (postgres + minio)"
+# ─── STEP 5: data layer ───────────────────────────────────────────────────────
+log "STEP 5: data layer (postgres + minio + mongodb + redis)"
 bash scripts/deploy-data.sh
 
-# ─── STEP 6: kafka + scylla ───────────────────
-log "STEP 6: kafka + scylla"
+helm repo add bitnami https://charts.bitnami.com/bitnami --force-update 2>/dev/null
+helm repo update bitnami 2>/dev/null
+kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
+
+helm upgrade --install mongodb bitnami/mongodb \
+  --namespace database --version 19.1.4 \
+  --values data/mongodb/mongodb-values.yaml \
+  --set auth.rootPassword=cbdcMongo2024! \
+  --wait --timeout 300s
+
+helm upgrade --install redis bitnami/redis \
+  --namespace database --version 27.0.4 \
+  --values data/redis/redis-values.yaml \
+  --wait --timeout 300s
+
+# ─── STEP 6: kafka ────────────────────────────────────────────────────────────
+log "STEP 6: kafka"
 kubectl apply -f data/kafka/kafka-operator-app.yaml
+wait_app_synced strimzi-kafka-operator 300
 
-echo "Waiting for ArgoCD to sync strimzi-kafka-operator..."
-kubectl wait application/strimzi-kafka-operator \
-  --namespace argocd \
-  --for=jsonpath='{.status.sync.status}'=Synced \
-  --timeout=300s 2>/dev/null || true
-
-echo "Waiting for kafka namespace to exist..."
+echo "Waiting for kafka namespace..."
 for i in $(seq 1 30); do
-  if kubectl get namespace kafka &>/dev/null; then
-    echo "  kafka namespace ready"
-    break
-  fi
-  echo "  [$i/30] waiting for kafka namespace..."
-  sleep 5
+  kubectl get namespace kafka &>/dev/null && echo "  kafka ns ready" && break
+  echo "  [$i/30] waiting..."; sleep 5
 done
 
-echo "Waiting for Strimzi cluster operator to be ready..."
 kubectl wait deployment/strimzi-cluster-operator \
-  --namespace kafka \
-  --for=condition=Available \
-  --timeout=300s
+  --namespace kafka --for=condition=Available --timeout=300s
 
 kubectl apply -f data/kafka/kafka-cluster-app.yaml
 
-echo "Waiting for Kafka cluster to be ready (max 10 min)..."
+echo "Waiting for Kafka cluster Ready (max 10 min)..."
 for i in $(seq 1 60); do
   READY=$(kubectl get kafka kafka -n kafka \
     -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "")
-  if [[ "$READY" == "True" ]]; then
-    echo "  Kafka cluster Ready"
-    break
-  fi
-  echo "  [$i/60] Kafka status: ${READY:-pending}..."
-  sleep 10
+  if [[ "$READY" == "True" ]]; then echo "  Kafka Ready"; break; fi
+  echo "  [$i/60] Kafka: ${READY:-pending}..."; sleep 10
 done
 
-echo "Waiting for entity operator to be ready..."
 kubectl wait deployment/kafka-entity-operator \
-  --namespace kafka \
-  --for=condition=Available \
-  --timeout=120s 2>/dev/null || true
+  --namespace kafka --for=condition=Available --timeout=120s 2>/dev/null || true
 
 kubectl apply -f data/kafka/kafka-topics.yaml
 
-kubectl apply -f data/scylla/scylla-app.yaml
-
-# ─── STEP 7: chain (Paladin + Besu) ──────────
-log "STEP 7: Paladin + Besu chain"
+# ─── STEP 7: chain (Besu QBFT + Paladin) ─────────────────────────────────────
+log "STEP 7: chain — Besu QBFT + Paladin (nodeCount=${NODE_COUNT})"
 kubectl apply -f chain/paladin-app.yaml
 
-echo "Waiting for Besu to produce blocks (max 5 min)..."
-BESU_POD=""
+echo "Waiting for Besu pod (max 5 min)..."
 for i in $(seq 1 30); do
   BESU_POD=$(kubectl get pod -n paladin -l app=besu --no-headers -o name 2>/dev/null | head -1 || true)
-  if [[ -n "$BESU_POD" ]]; then
-    break
-  fi
-  echo "  [$i/30] waiting for Besu pod to appear..."
-  sleep 10
+  [[ -n "$BESU_POD" ]] && break
+  echo "  [$i/30] waiting for besu pod..."; sleep 10
 done
 
-if [[ -z "$BESU_POD" ]]; then
-  echo "ERROR: Besu pod not found after 5 min" >&2
-  exit 1
-fi
-
-echo "Found Besu pod: $BESU_POD"
-BLOCK_NUM=0
+echo "Waiting for Besu to produce blocks (max 5 min)..."
 for i in $(seq 1 60); do
-  BLOCK_HEX=$(curl -sf -X POST "http://localhost:${BESU_NODE_PORT}" \
+  BLOCK_HEX=$(curl -sf --max-time 3 -X POST "http://localhost:${BESU_BASE_PORT}" \
     -H 'Content-Type: application/json' \
     -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-    2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result','0x0'))" || echo "0x0")
+    2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result','0x0'))" 2>/dev/null || echo "0x0")
   BLOCK_NUM=$(python3 -c "print(int('$BLOCK_HEX', 16))" 2>/dev/null || echo 0)
-  echo "  [$i/60] block height: $BLOCK_NUM"
-  if [[ "$BLOCK_NUM" -gt 0 ]]; then
-    echo "  Besu is producing blocks."
-    break
-  fi
+  echo "  [$i/60] block: $BLOCK_NUM"
+  [[ "$BLOCK_NUM" -gt 0 ]] && echo "  Besu producing blocks." && break
   sleep 5
 done
 
-if [[ "$BLOCK_NUM" -eq 0 ]]; then
-  echo "ERROR: Besu still at block 0 after 60 attempts (5 min). Check paladin namespace." >&2
-  exit 1
+# Apply additional node CRs for nodeCount > 1 (idempotent)
+if [[ "$NODE_COUNT" -gt 1 ]]; then
+  echo "Applying Besu+Paladin CRs for node2-${NODE_COUNT}..."
+  kubectl apply -f chain/crds/nodes.yaml
+
+  echo "Waiting for all Paladin nodes Ready (max 5 min)..."
+  for i in $(seq 1 30); do
+    READY_COUNT=$(kubectl get paladin -n paladin \
+      -o jsonpath='{.items[*].status.phase}' 2>/dev/null | tr ' ' '\n' | grep -c "Ready" || echo 0)
+    echo "  [$i/30] Paladin Ready: ${READY_COUNT}/${NODE_COUNT}"
+    [[ "$READY_COUNT" -ge "$NODE_COUNT" ]] && break
+    sleep 10
+  done
+
+  # Fix race: Paladin may crash if its Besu wasn't ready on first start
+  for node in $(seq 2 "$NODE_COUNT"); do
+    POD_STATE=$(kubectl get pod "paladin-node${node}-0" -n paladin \
+      -o jsonpath='{.status.containerStatuses[?(@.name=="paladin")].state.waiting.reason}' 2>/dev/null || true)
+    if [[ "$POD_STATE" == "CrashLoopBackOff" ]]; then
+      echo "  Restarting paladin-node${node}-0 (CrashLoopBackOff — besu race)"
+      kubectl delete pod "paladin-node${node}-0" -n paladin --grace-period=0 --force 2>/dev/null || true
+    fi
+  done
 fi
 
-# ─── STEP 8: Event Bridge ────────────────────
+# Verify Paladin node1 JSON-RPC reachable
+echo "Verifying Paladin node1 JSON-RPC..."
+for i in $(seq 1 12); do
+  PALADIN_NODE=$(curl -sf --max-time 3 -X POST "http://localhost:${PALADIN_BASE_PORT}" \
+    -H 'Content-Type: application/json' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"transport_nodeName","params":[]}' \
+    2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('result',''))" 2>/dev/null || true)
+  [[ -n "$PALADIN_NODE" ]] && echo "  Paladin node1 ready: $PALADIN_NODE" && break
+  echo "  [$i/12] Paladin not ready yet..."; sleep 10
+done
+
+# ─── STEP 8: event bridge ─────────────────────────────────────────────────────
 log "STEP 8: Event Bridge (Paladin → Kafka)"
 kubectl apply -f event-bridge/event-bridge-app.yaml
-echo "Waiting for event-bridge to be ready..."
 kubectl wait deployment/cbdc-event-bridge \
-  --namespace paladin \
-  --for=condition=Available \
-  --timeout=120s
+  --namespace paladin --for=condition=Available --timeout=120s
 
-# ─── STEP 9: monitoring ──────────────────────
-log "STEP 9: monitoring"
+# ─── STEP 9: monitoring ───────────────────────────────────────────────────────
+log "STEP 9: monitoring (Prometheus + Loki)"
 kubectl apply -f platform/argocd/apps/monitoring.yaml
 kubectl apply -f platform/argocd/apps/loki.yaml
 
-# ─── Done ─────────────────────────────────────
+# ─── STEP 10: FireFly middleware ──────────────────────────────────────────────
+if [[ "$SKIP_FIREFLY" == "false" ]]; then
+  log "STEP 10: FireFly — IPFS → Signer → EVMConnect → Core"
+
+  kubectl apply -f middleware/firefly/ipfs-app.yaml
+  wait_app_synced ipfs 300
+
+  kubectl apply -f middleware/firefly/signer-app.yaml
+  wait_app_synced firefly-signer 300
+
+  kubectl apply -f middleware/firefly/evmconnect-app.yaml
+  wait_app_synced firefly-evmconnect 300
+
+  kubectl apply -f middleware/firefly/firefly-app.yaml
+  echo "FireFly core deployed. First startup: ~2-5 min (org/node registration)."
+  echo "Watch: kubectl logs -n firefly -l app.kubernetes.io/name=firefly -f"
+else
+  log "STEP 10: FireFly — SKIPPED (--skip-firefly)"
+fi
+
+# ─── STEP 11: CBDC contracts ──────────────────────────────────────────────────
+if [[ "$SKIP_CONTRACTS" == "false" ]]; then
+  log "STEP 11: Deploy CBDC contracts (Pente)"
+  if command -v node &>/dev/null && command -v npm &>/dev/null; then
+    bash scripts/deploy-contracts.sh
+  else
+    echo "  SKIP: node/npm not installed. Run manually: bash scripts/deploy-contracts.sh"
+  fi
+else
+  log "STEP 11: CBDC contracts — SKIPPED (--skip-contracts)"
+fi
+
+# ─── Done ─────────────────────────────────────────────────────────────────────
 log "BOOTSTRAP COMPLETE"
 echo ""
-echo "Verify commands:"
-echo "  kubectl get applications -n argocd"
-echo "  kubectl get pods -n paladin"
-echo "  kubectl get pods -n minio"
-echo "  kubectl get pods -n kafka"
+echo "  Org:   ${ORG_NAME}.${ORG_DOMAIN}"
+echo "  Nodes: ${NODE_COUNT} Besu QBFT + ${NODE_COUNT} Paladin"
 echo ""
-echo "Paladin API:  https://paladin1.${ORG_DOMAIN}"
-echo "MinIO UI:     https://minio.${ORG_DOMAIN}"
-echo "ArgoCD:       https://argocd.${ORG_DOMAIN}"
+echo "Endpoints (localhost NodePorts):"
+for node in $(seq 1 "$NODE_COUNT"); do
+  BPORT=$((BESU_BASE_PORT + (node - 1) * 100))
+  PPORT=$((PALADIN_BASE_PORT + (node - 1) * 100))
+  echo "  besu-node${node}:    http://localhost:${BPORT}  (eth JSON-RPC)"
+  echo "  paladin-node${node}: http://localhost:${PPORT}  (paladin JSON-RPC)"
+done
 echo ""
-echo "Kafka topics created:"
-echo "  cbdc.tx.confirmed  cbdc.mint  cbdc.transfer  cbdc.audit"
+echo "Kafka topics:  cbdc.tx.confirmed  cbdc.mint  cbdc.transfer  cbdc.audit"
+if [[ "$SKIP_FIREFLY" == "false" ]]; then
+  echo ""
+  echo "FireFly:"
+  echo "  kubectl port-forward svc/firefly 5000:5000 -n firefly"
+  echo "  curl http://localhost:5000/api/v1/namespaces/default/status"
+fi
 echo ""
-echo "Next step: deploy your CBDC Solidity contract to Pente domain"
-echo "  POST http://localhost:${BESU_NODE_PORT}/api/v1/domains/pente/contracts"
+echo "All ArgoCD apps: kubectl get applications -n argocd"
 echo ""

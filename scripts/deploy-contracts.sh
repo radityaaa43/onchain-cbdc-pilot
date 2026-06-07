@@ -30,13 +30,17 @@ echo "  Admin:    $ADMIN_ADDR"
 echo "  ChainId:  $CHAIN_ID"
 echo ""
 
-# Check Paladin reachable
-if ! curl -sf --max-time 5 "${PALADIN_URL}/api/v1/" > /dev/null 2>&1; then
+# Check Paladin reachable — Paladin is JSON-RPC only, no REST /api/v1/
+PALADIN_NODE=$(curl -sf --max-time 5 -X POST "${PALADIN_URL}" \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"transport_nodeName","params":[]}' \
+  2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result','?'))" 2>/dev/null || true)
+if [[ -z "$PALADIN_NODE" || "$PALADIN_NODE" == "?" ]]; then
   echo "ERROR: Paladin not reachable at ${PALADIN_URL}" >&2
   echo "       Wait for Besu+Paladin to be Ready, then retry." >&2
   exit 1
 fi
-echo "Paladin OK."
+echo "Paladin OK. Node: ${PALADIN_NODE}"
 
 # Install paladin-sdk if not present
 if [[ ! -d "${ROOT_DIR}/node_modules/@lfdecentralizedtrust/paladin-sdk" ]]; then
