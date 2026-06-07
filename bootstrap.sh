@@ -83,9 +83,11 @@ log "STEP 3: ArgoCD"
 bash platform/argocd/install.sh
 kubectl apply -f platform/argocd/root-app.yaml
 
-# Prevent StatefulSet terminatingReplicas ComparisonError globally
-kubectl patch configmap argocd-cm -n argocd --type merge \
-  -p '{"data":{"resource.customizations":"apps/StatefulSet:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\n"}}' \
+# Fix ArgoCD structured-merge-diff crash on .status.terminatingReplicas (k8s 1.29+ field
+# not in ArgoCD's embedded OpenAPI schema). ServerSideDiff uses the k8s API server's
+# schema which knows the field, so the comparison succeeds.
+kubectl patch configmap argocd-cm -n argocd --type merge -p \
+  '{"data":{"resource.compareoptions":"serverSideDiff: true\n","resource.customizations":"apps/StatefulSet:\n  ignoreDifferences: |\n    jsonPointers:\n    - /status/terminatingReplicas\n"}}' \
   2>/dev/null || true
 
 # ─── STEP 4: Vault ────────────────────────────────────────────────────────────
