@@ -4,7 +4,7 @@ org:
 
 besu:
   chainId: 1337
-  nodeCount: 1
+  nodeCount: 4
   imageTag: latest
   baseNodePort: 31545
   blockPeriod: 2

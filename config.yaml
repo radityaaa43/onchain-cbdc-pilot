@@ -22,7 +22,7 @@ besu:
   zeroBaseFee: true
   evmFork: cancun
   imageTag: latest
-  nodeCount: 1
+  nodeCount: 4
   baseNodePort: 31545
 
 paladin:
