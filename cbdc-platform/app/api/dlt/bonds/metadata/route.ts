@@ -7,7 +7,7 @@ import { AuthError } from "@/lib/auth/session";
 
 const Body = z.object({
   group: z.enum(["static", "terms", "dlt-platform", "credit-events", "ratings", "indonesian"]),
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });
 
 const SETTERS = {
