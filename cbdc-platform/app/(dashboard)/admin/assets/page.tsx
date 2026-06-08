@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/rbac";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -12,9 +11,9 @@ export default async function AssetsPage() {
     <section>
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-mono text-lg">Assets</h1>
-        <Button asChild>
-          <Link href="/admin/assets/new">New asset</Link>
-        </Button>
+        <Link href="/admin/assets/new" className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90">
+          New asset
+        </Link>
       </div>
       <Table>
         <TableHeader>
@@ -42,9 +41,9 @@ export default async function AssetsPage() {
                 {i.bondId ? i.bondId.slice(0, 14) + "…" : "—"}
               </TableCell>
               <TableCell>
-                <Button asChild size="sm" variant="secondary">
-                  <Link href={`/admin/assets/${i.id}`}>Manage</Link>
-                </Button>
+                <Link href={`/admin/assets/${i.id}`} className="inline-flex items-center justify-center rounded-md bg-secondary text-secondary-foreground px-3 py-1 text-xs font-medium hover:bg-secondary/80">
+                  Manage
+                </Link>
               </TableCell>
             </TableRow>
           ))}
