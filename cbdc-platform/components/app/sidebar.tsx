@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet, ShieldCheck, FileText } from "lucide-react";
+import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet, ShieldCheck, FileText, Handshake } from "lucide-react";
 
 const OPERATOR_NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -7,6 +7,7 @@ const OPERATOR_NAV = [
   { href: "/admin/cbdc", label: "CBDC", icon: Landmark },
   { href: "/admin/auction", label: "Auction", icon: Gavel },
   { href: "/admin/dvp", label: "DVP", icon: ArrowLeftRight },
+  { href: "/admin/securities", label: "Securities", icon: Handshake },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },
 ];
@@ -18,6 +19,10 @@ const PARTICIPANT_NAV = [
   { href: "/participant/dvp", label: "DVP", icon: ArrowLeftRight },
   { href: "/participant/compliance", label: "Compliance", icon: ShieldCheck },
   { href: "/participant/reports", label: "Reports", icon: FileText },
+  { href: "/participant/repo", label: "Repo", icon: Handshake },
+  { href: "/participant/lending", label: "Lending", icon: Handshake },
+  { href: "/participant/pledge", label: "Pledge", icon: Handshake },
+  { href: "/participant/custody", label: "Custody", icon: Handshake },
 ];
 
 export function Sidebar({ role }: { role: string }) {
