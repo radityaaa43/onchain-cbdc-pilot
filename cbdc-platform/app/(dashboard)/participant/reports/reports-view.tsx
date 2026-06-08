@@ -82,8 +82,8 @@ export function ReportsView() {
               </tr>
             </thead>
             <tbody>
-              {records.map((r, i) => (
-                <tr key={i} className="border-b border-border/50">
+              {records.map((r) => (
+                <tr key={`${r.blockNumber}-${r.from}-${r.to}-${r.amount}`} className="border-b border-border/50">
                   <td className="py-1.5 pr-3">{r.blockNumber}</td>
                   <td className="py-1.5 pr-3">{r.from.slice(0, 10)}…</td>
                   <td className="py-1.5 pr-3">{r.to.slice(0, 10)}…</td>
