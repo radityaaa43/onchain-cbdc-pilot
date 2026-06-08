@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,7 @@ export function RepoDeskView() {
       {detail && (
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           {Object.entries(detail).map(([k, v]) => (
-            <><dt key={`k-${k}`} className="text-muted-foreground">{k}</dt><dd key={`v-${k}`} className="font-mono text-xs break-all">{String(v)}</dd></>
+            <Fragment key={k}><dt className="text-muted-foreground">{k}</dt><dd className="font-mono text-xs break-all">{String(v)}</dd></Fragment>
           ))}
         </dl>
       )}
