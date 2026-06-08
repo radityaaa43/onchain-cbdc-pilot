@@ -38,7 +38,8 @@ export async function txWithLogs(
     .waitForReceipt(config.waitMs, true);
   if (!receipt?.success)
     throw new Error(`TX failed [${fn}]: ${JSON.stringify(receipt?.failureMessage ?? "timeout")}`);
-  const logs = (receipt as any)?.domainReceipt?.receipt?.logs ?? [];
+  const rawLogs = (receipt as any)?.domainReceipt?.receipt?.logs;
+  const logs = Array.isArray(rawLogs) ? rawLogs : [];
   return { logs };
 }
 

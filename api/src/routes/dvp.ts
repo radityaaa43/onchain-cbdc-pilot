@@ -23,7 +23,8 @@ export async function dvpRoute(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const { logs } = await txWithLogs(config.contracts.dvp, "initiateDVP", parsed.data);
     if (logs.length === 0) return reply.code(500).send({ error: "No logs from initiateDVP" });
-    const settlementId = logs[0].topics[1];
+    const settlementId = logs[0]?.topics?.[1];
+    if (!settlementId) return reply.code(500).send({ error: "Invalid log format from initiateDVP" });
     return { settlementId };
   });
 
