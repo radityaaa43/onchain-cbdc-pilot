@@ -18,13 +18,14 @@ export async function tx(
   to: string,
   fn: string,
   data: Record<string, unknown>
-): Promise<void> {
+): Promise<Record<string, unknown>> {
   const group = await getGroup();
   const receipt = await group
     .sendTransaction({ from: config.paladinFrom, to, methodAbi: ABI[fn], data })
     .waitForReceipt(config.waitMs, true);
   if (!receipt?.success)
     throw new Error(`TX failed [${fn}]: ${JSON.stringify(receipt?.failureMessage ?? "timeout")}`);
+  return (receipt as any)?.domainReceipt?.receipt ?? {};
 }
 
 export async function txWithLogs(

@@ -330,7 +330,7 @@ export async function infrastructureRoute(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/bond-metadata/matured", async () => {
-    const res = await call(config.contracts.bondMetadata, "isMatured", {});
+    const res = await call(config.contracts.bondMetadata, "bondMetadataIsMatured", {});
     return { isMatured: Boolean(res["0"]) };
   });
 

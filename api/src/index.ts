@@ -10,6 +10,7 @@ import { bondAdvancedRoute } from "./routes/bond-advanced";
 import { dvpRoute } from "./routes/dvp";
 import { complianceRoute } from "./routes/compliance";
 import { infrastructureRoute } from "./routes/infrastructure";
+import { adminRoute } from "./routes/admin";
 
 const app = Fastify({ logger: true });
 
@@ -27,6 +28,7 @@ app.register(bondAdvancedRoute);
 app.register(dvpRoute);
 app.register(complianceRoute);
 app.register(infrastructureRoute);
+app.register(adminRoute);
 
 app.listen({ port: config.port, host: "0.0.0.0" }, (err) => {
   if (err) { app.log.error(err); process.exit(1); }

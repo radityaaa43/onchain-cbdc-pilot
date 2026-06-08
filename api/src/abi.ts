@@ -1,6 +1,11 @@
 import { JsonFragment } from "ethers";
 
 export const ABI: Record<string, JsonFragment> = {
+  // AccessControl (OpenZeppelin — same ABI on all contracts)
+  grantRole:    { name: "grantRole",    type: "function", inputs: [{ name: "role", type: "bytes32" }, { name: "account", type: "address" }], outputs: [], stateMutability: "nonpayable" },
+  revokeRole:   { name: "revokeRole",   type: "function", inputs: [{ name: "role", type: "bytes32" }, { name: "account", type: "address" }], outputs: [], stateMutability: "nonpayable" },
+  hasRole:      { name: "hasRole",      type: "function", inputs: [{ name: "role", type: "bytes32" }, { name: "account", type: "address" }], outputs: [{ name: "", type: "bool" }], stateMutability: "view" },
+
   // CBToken
   balanceOf:    { name: "balanceOf",    type: "function", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }], stateMutability: "view" },
   approve:      { name: "approve",      type: "function", inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], outputs: [{ type: "bool" }], stateMutability: "nonpayable" },
@@ -226,6 +231,7 @@ export const ABI: Record<string, JsonFragment> = {
   setCreditEvents:         { name: "setCreditEvents",         type: "function", inputs: [{ name: "events", type: "tuple", components: [] }], outputs: [], stateMutability: "nonpayable" },
   setBondRatings:          { name: "setBondRatings",          type: "function", inputs: [{ name: "ratings", type: "tuple", components: [] }], outputs: [], stateMutability: "nonpayable" },
   setIndonesianMarketData: { name: "setIndonesianMarketData", type: "function", inputs: [{ name: "data", type: "tuple", components: [] }], outputs: [], stateMutability: "nonpayable" },
+  bondMetadataIsMatured:   { name: "isMatured",               type: "function", inputs: [], outputs: [{ name: "", type: "bool" }], stateMutability: "view" },
   isSyariah:               { name: "isSyariah",               type: "function", inputs: [], outputs: [{ name: "", type: "bool" }], stateMutability: "view" },
   interestType:            { name: "interestType",            type: "function", inputs: [], outputs: [{ name: "", type: "string" }], stateMutability: "view" },
 
