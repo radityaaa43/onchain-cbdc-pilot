@@ -65,7 +65,7 @@ describe("POST /api/dlt/corporate-action", () => {
   it("returns 202 for vote-consent", async () => {
     const res = await POST(postReq({
       action: "vote-consent",
-      proposalId: "0x" + "pp".repeat(32),
+      proposalId: "0x" + "ab".repeat(32),
       inFavor: true,
     }));
     expect(res.status).toBe(202);

@@ -5,7 +5,7 @@ import { startOperation } from "@/lib/operations";
 import { corporateAction } from "@/lib/dlt/domains/corporateAction";
 import { AuthError } from "@/lib/auth/session";
 
-const B32 = z.string().length(66).startsWith("0x");
+const B32  = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 
 const ScheduleCallBody       = z.object({ action: z.literal("schedule-call-option"),        bondId: B32, callDate: z.number().positive(), callPriceBps: z.number().positive() });
 const ExecuteCallBody        = z.object({ action: z.literal("execute-call-batch"),           bondId: B32 });
