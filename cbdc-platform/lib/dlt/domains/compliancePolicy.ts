@@ -1,4 +1,4 @@
-import { dltGet, dltTx } from "../client";
+import { dltTx } from "../client";
 
 export const compliancePolicy = {
   checkTransfer: (b: { from: string; to: string; amount: number; assetId: string }) =>
