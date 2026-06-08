@@ -39,7 +39,8 @@ export async function POST(req: Request) {
     else if (d.action === "terminate-early")          fn = () => repo.terminateEarly(d.repoId);
     else if (d.action === "unwind")                   fn = () => repo.unwind(d.repoId);
     else if (d.action === "margin-call")              fn = () => repo.marginCall({ repoId: d.repoId, currentMarketPrice: d.currentMarketPrice });
-    else                                              fn = () => repo.marginCallRespond({ repoId: d.repoId, amount: d.amount });
+    else if (d.action === "margin-call-respond")      fn = () => repo.marginCallRespond({ repoId: d.repoId, amount: d.amount });
+    else                                              fn = () => Promise.resolve();
     const { operationId } = await startOperation(
       { userId: user.userId, orgId: user.orgId, action: `repo.${d.action}`, idempotencyKey: key, request: d },
       () => fn().then((r) => ({ result: r })),
