@@ -50,7 +50,7 @@ describe("corporateAction.proposeRestructuring", () => {
   });
 });
 
-describe("corporateAction.proposalId", () => {
+describe("corporateAction.lastProposalId", () => {
   it("calls GET /corporate-action/last-proposal-id", async () => {
     mockGet.mockResolvedValueOnce({ proposalId: "0xprop1" });
     const r = await corporateAction.lastProposalId();
