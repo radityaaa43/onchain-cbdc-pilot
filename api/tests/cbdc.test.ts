@@ -13,7 +13,7 @@ afterAll(() => app.close());
 beforeEach(() => jest.clearAllMocks());
 
 test("POST /cbdc/issue calls issue tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/cbdc/issue",
     payload: { to: "0xabc", amount: 1000 },
@@ -33,7 +33,7 @@ test("POST /cbdc/issue returns 400 on missing fields", async () => {
 });
 
 test("POST /cbdc/transfer calls transfer tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/cbdc/transfer",
     payload: { from: "0xabc", to: "0xdef", amount: 500 },

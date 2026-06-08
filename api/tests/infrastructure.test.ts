@@ -22,7 +22,7 @@ test("POST /netting/session opens a session", async () => {
 });
 
 test("POST /netting/session/entry adds entry", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/netting/session/entry",
     payload: { sessionId: "0xsess", from: "0xaaa", to: "0xbbb", amount: 100 },
@@ -32,14 +32,14 @@ test("POST /netting/session/entry adds entry", async () => {
 });
 
 test("POST /netting/session/:sessionId/settle settles session", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/netting/session/0xsess/settle" });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "settleSession", { sessionId: "0xsess" });
 });
 
 test("POST /netting/session/:sessionId/cancel cancels session", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/netting/session/0xsess/cancel" });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "cancelSession", { sessionId: "0xsess" });
@@ -62,7 +62,7 @@ test("GET /netting/session/:sessionId/entries returns entries", async () => {
 // ── OracleService ─────────────────────────────────────────────────────────────
 
 test("POST /oracle/rate sets rate", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/oracle/rate",
     payload: { bondId: "0xbond1", rate: 500 },
@@ -72,7 +72,7 @@ test("POST /oracle/rate sets rate", async () => {
 });
 
 test("POST /oracle/price sets price", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/oracle/price",
     payload: { bondId: "0xbond1", price: 1000000 },
@@ -81,7 +81,7 @@ test("POST /oracle/price sets price", async () => {
 });
 
 test("POST /oracle/credit-event reports event", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/oracle/credit-event",
     payload: { bondId: "0xbond1", eventType: "0xdefault", timestamp: 1700000000 },
@@ -113,7 +113,7 @@ test("GET /oracle/credit-event/:bondId/:eventType returns timestamp", async () =
 // ── ReportingService ──────────────────────────────────────────────────────────
 
 test("POST /reporting/transaction logs a tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/reporting/transaction",
     payload: { assetId: "0xasset", from: "0xaaa", to: "0xbbb", amount: 100, ref: "0xref1" },
@@ -196,7 +196,7 @@ test("GET /token-gateway/asset/:assetId/registered returns bool", async () => {
 // ── SettlementFailureService ──────────────────────────────────────────────────
 
 test("POST /settlement-failure/report reports failure", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/settlement-failure/report",
     payload: { settlementId: "0xsettle1", reason: 1, details: "insufficient funds" },
@@ -206,28 +206,28 @@ test("POST /settlement-failure/report reports failure", async () => {
 });
 
 test("POST /settlement-failure/:settlementId/retry retries", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/settlement-failure/0xsettle1/retry" });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "retrySettlement", { settlementId: "0xsettle1" });
 });
 
 test("POST /settlement-failure/:settlementId/escalate escalates", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/settlement-failure/0xsettle1/escalate" });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "escalateToArbitration", { settlementId: "0xsettle1" });
 });
 
 test("POST /settlement-failure/:settlementId/buy-in/initiate initiates buy-in", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/settlement-failure/0xsettle1/buy-in/initiate" });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "initiateBuyIn", { settlementId: "0xsettle1" });
 });
 
 test("POST /settlement-failure/buy-in/execute executes buy-in", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/settlement-failure/buy-in/execute",
     payload: { settlementId: "0xsettle1", buyInAmount: 1000, buyInPriceBps: 10100 },
@@ -253,7 +253,7 @@ test("GET /settlement-failure/:settlementId/buy-in returns buy-in", async () => 
 // ── BondMetadataRegistry ──────────────────────────────────────────────────────
 
 test("POST /bond-metadata/static sets static data", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/static",
     payload: { data: { isin: "ID1234567890" } },
@@ -263,7 +263,7 @@ test("POST /bond-metadata/static sets static data", async () => {
 });
 
 test("POST /bond-metadata/terms sets terms", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/terms",
     payload: { data: { couponRate: 625 } },
@@ -272,7 +272,7 @@ test("POST /bond-metadata/terms sets terms", async () => {
 });
 
 test("POST /bond-metadata/dlt-platform sets DLT data", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/dlt-platform",
     payload: { data: { network: "besu" } },
@@ -281,7 +281,7 @@ test("POST /bond-metadata/dlt-platform sets DLT data", async () => {
 });
 
 test("POST /bond-metadata/credit-events sets credit events", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/credit-events",
     payload: { data: {} },
@@ -290,7 +290,7 @@ test("POST /bond-metadata/credit-events sets credit events", async () => {
 });
 
 test("POST /bond-metadata/ratings sets ratings", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/ratings",
     payload: { data: { moody: "Aaa" } },
@@ -299,7 +299,7 @@ test("POST /bond-metadata/ratings sets ratings", async () => {
 });
 
 test("POST /bond-metadata/indonesian-market sets indonesian market data", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/bond-metadata/indonesian-market",
     payload: { data: { sector: "gov" } },

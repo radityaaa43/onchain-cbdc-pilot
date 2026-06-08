@@ -13,7 +13,7 @@ afterAll(() => app.close());
 beforeEach(() => jest.clearAllMocks());
 
 test("POST /bonds/register calls registerBond tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xbondid123" });
   const res = await app.inject({
     method: "POST", url: "/bonds/register",
@@ -28,7 +28,7 @@ test("POST /bonds/register calls registerBond tx", async () => {
 });
 
 test("POST /bonds/:bondId/issue calls issueBond tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const bondId = "0x" + "a".repeat(64);
   const res = await app.inject({
     method: "POST", url: `/bonds/${bondId}/issue`,

@@ -15,7 +15,7 @@ beforeEach(() => jest.clearAllMocks());
 // ── DFABIComplianceService ────────────────────────────────────────────────────
 
 test("POST /compliance/dfabi/eligible calls setEligible", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/dfabi/eligible",
     payload: { participant: "0xabc", eligible: true },
@@ -26,7 +26,7 @@ test("POST /compliance/dfabi/eligible calls setEligible", async () => {
 });
 
 test("POST /compliance/dfabi/eligible-by-bond calls setEligibleByBond", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/dfabi/eligible-by-bond",
     payload: { participant: "0xabc", bondId: "0x" + "b".repeat(64), eligible: false },
@@ -36,7 +36,7 @@ test("POST /compliance/dfabi/eligible-by-bond calls setEligibleByBond", async ()
 });
 
 test("POST /compliance/dfabi/restriction calls setRestriction", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/dfabi/restriction",
     payload: { bondId: "0x" + "a".repeat(64), restriction: { minAmount: 100, maxAmount: 10000 } },
@@ -68,7 +68,7 @@ test("GET /compliance/dfabi/eligibility returns eligible", async () => {
 // ── ComplianceService ─────────────────────────────────────────────────────────
 
 test("POST /compliance/participant/eligible calls setEligibleParticipant", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/participant/eligible",
     payload: { participant: "0xp", assetId: "0xasset", eligible: true },
@@ -78,7 +78,7 @@ test("POST /compliance/participant/eligible calls setEligibleParticipant", async
 });
 
 test("POST /compliance/participant/suspended calls setParticipantSuspended", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/participant/suspended",
     payload: { participant: "0xp", suspended: true, reason: "AML flag" },
@@ -88,7 +88,7 @@ test("POST /compliance/participant/suspended calls setParticipantSuspended", asy
 });
 
 test("POST /compliance/participant/risk-category calls setRiskCategory", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/participant/risk-category",
     payload: { participant: "0xp", riskCategory: "HIGH" },
@@ -98,7 +98,7 @@ test("POST /compliance/participant/risk-category calls setRiskCategory", async (
 });
 
 test("POST /compliance/report-suspicious calls reportSuspiciousActivity", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/report-suspicious",
     payload: { entity: "0xe", reason: "wash trading" },
@@ -152,7 +152,7 @@ test("POST /compliance/policy/check-transfer returns allowed", async () => {
 });
 
 test("POST /compliance/policy/rule calls addPolicyRule", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/policy/rule",
     payload: { ruleId: "0x" + "c".repeat(64), ruleContract: "0xrc" },
@@ -162,7 +162,7 @@ test("POST /compliance/policy/rule calls addPolicyRule", async () => {
 });
 
 test("DELETE /compliance/policy/rule/:ruleId calls removePolicyRule", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const ruleId = "0x" + "d".repeat(64);
   const res = await app.inject({ method: "DELETE", url: `/compliance/policy/rule/${ruleId}` });
   expect(res.statusCode).toBe(200);
@@ -170,7 +170,7 @@ test("DELETE /compliance/policy/rule/:ruleId calls removePolicyRule", async () =
 });
 
 test("POST /compliance/policy/default calls setDefaultPolicy", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/policy/default",
     payload: { policyAddress: "0xpa" },
@@ -182,7 +182,7 @@ test("POST /compliance/policy/default calls setDefaultPolicy", async () => {
 // ── ShariahComplianceService ──────────────────────────────────────────────────
 
 test("POST /compliance/shariah/approve-sukuk calls approveSukuk", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const bondId = "0x" + "e".repeat(64);
   const res = await app.inject({
     method: "POST", url: "/compliance/shariah/approve-sukuk",
@@ -203,7 +203,7 @@ test("POST /compliance/shariah/certify-profit returns compliant", async () => {
 });
 
 test("POST /compliance/shariah/event calls reportShariahEvent", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/compliance/shariah/event",
     payload: { bondId: "0xbond", eventType: "PROFIT_PAYMENT" },

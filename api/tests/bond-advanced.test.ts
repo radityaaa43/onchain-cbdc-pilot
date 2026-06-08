@@ -15,7 +15,7 @@ beforeEach(() => jest.clearAllMocks());
 // ── CustodyService ────────────────────────────────────────────────────────────
 
 test("POST /custody/register-custodian calls registerCustodian tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/custody/register-custodian",
     payload: { custodian: "0xabc" },
@@ -26,7 +26,7 @@ test("POST /custody/register-custodian calls registerCustodian tx", async () => 
 });
 
 test("POST /custody/beneficial-owner calls setBeneficialOwner tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const payload = { bondId: "0xbond", custodian: "0xcust", subAccountId: "0xsub", owner: "0xowner" };
   const res = await app.inject({
     method: "POST", url: "/custody/beneficial-owner",
@@ -60,17 +60,17 @@ test("GET /custody/holdings returns holdings", async () => {
 // ── PledgeService ─────────────────────────────────────────────────────────────
 
 test("POST /pledge/create calls createPledge and returns pledgeId", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xpledge123" });
   const payload = { bondId: "0xbond", pledgor: "0xpledor", pledgee: "0xpledgee", amount: 1000, expiryDate: 1800000000 };
   const res = await app.inject({ method: "POST", url: "/pledge/create", payload });
   expect(res.statusCode).toBe(200);
-  expect(mockTx).toHaveBeenCalledWith(expect.any(String), "createPledge", payload);
+  expect(mockTx).toHaveBeenCalledWith(expect.any(String), "createPledgeV2", payload);
   expect(JSON.parse(res.body)).toEqual({ pledgeId: "0xpledge123" });
 });
 
 test("POST /pledge/create-v2 returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const payload = { bondId: "0xbond", pledgor: "0xpledor", pledgee: "0xpledgee", amount: 1000, expiryDate: 1800000000 };
   const res = await app.inject({ method: "POST", url: "/pledge/create-v2", payload });
   expect(res.statusCode).toBe(200);
@@ -78,7 +78,7 @@ test("POST /pledge/create-v2 returns ok", async () => {
 });
 
 test("POST /pledge/release calls releasePledge tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/pledge/release",
     payload: { pledgeId: "0xpledge123" },
@@ -88,7 +88,7 @@ test("POST /pledge/release calls releasePledge tx", async () => {
 });
 
 test("POST /pledge/enforce calls enforcePledge tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/pledge/enforce",
     payload: { pledgeId: "0xpledge123" },
@@ -118,7 +118,7 @@ test("GET /pledge/:pledgeId returns pledge details", async () => {
 // ── RepoService ───────────────────────────────────────────────────────────────
 
 test("POST /repo/initiate calls initiateRepo and returns repoId", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xrepo123" });
   const payload = { bondId: "0xbond", seller: "0xseller", buyer: "0xbuyer", amount: 1000, repoRate: 500, tenor: 30 };
   const res = await app.inject({ method: "POST", url: "/repo/initiate", payload });
@@ -128,7 +128,7 @@ test("POST /repo/initiate calls initiateRepo and returns repoId", async () => {
 });
 
 test("POST /repo/initiate-with-haircut returns repoId", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xrepo456" });
   const payload = { bondId: "0xbond", seller: "0xs", buyer: "0xb", amount: 1000, repoRate: 500, tenor: 30, marketPrice: 950, haircut: 5, marginCallThreshold: 10 };
   const res = await app.inject({ method: "POST", url: "/repo/initiate-with-haircut", payload });
@@ -137,7 +137,7 @@ test("POST /repo/initiate-with-haircut returns repoId", async () => {
 });
 
 test("POST /repo/initiate-v2 returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const payload = { bondId: "0xbond", seller: "0xs", buyer: "0xb", amount: 1000, repoRate: 500, tenor: 30 };
   const res = await app.inject({ method: "POST", url: "/repo/initiate-v2", payload });
   expect(res.statusCode).toBe(200);
@@ -145,35 +145,35 @@ test("POST /repo/initiate-v2 returns ok", async () => {
 });
 
 test("POST /repo/consent-early-termination returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/repo/consent-early-termination", payload: { repoId: "0xrepo" } });
   expect(res.statusCode).toBe(200);
   expect(JSON.parse(res.body)).toEqual({ ok: true });
 });
 
 test("POST /repo/terminate-early returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/repo/terminate-early", payload: { repoId: "0xrepo" } });
   expect(res.statusCode).toBe(200);
   expect(JSON.parse(res.body)).toEqual({ ok: true });
 });
 
 test("POST /repo/unwind returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/repo/unwind", payload: { repoId: "0xrepo" } });
   expect(res.statusCode).toBe(200);
   expect(JSON.parse(res.body)).toEqual({ ok: true });
 });
 
 test("POST /repo/margin-call calls initiateMarginCall", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/repo/margin-call", payload: { repoId: "0xrepo", currentMarketPrice: 920 } });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "initiateMarginCall", { repoId: "0xrepo", currentMarketPrice: 920 });
 });
 
 test("POST /repo/margin-call/respond calls respondToMarginCall", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/repo/margin-call/respond", payload: { repoId: "0xrepo", amount: 100 } });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "respondToMarginCall", { repoId: "0xrepo", amount: 100 });
@@ -208,7 +208,7 @@ test("GET /repo/:repoId returns repo details", async () => {
 // ── SecuritiesLendingService ──────────────────────────────────────────────────
 
 test("POST /lending/initiate calls initiateLend and returns lendId", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xlend123" });
   const payload = { bondId: "0xbond", lender: "0xlender", borrower: "0xborrower", amount: 1000, feeRateBps: 50, tenor: 30 };
   const res = await app.inject({ method: "POST", url: "/lending/initiate", payload });
@@ -218,7 +218,7 @@ test("POST /lending/initiate calls initiateLend and returns lendId", async () =>
 });
 
 test("POST /lending/initiate-with-haircut returns lendId", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   mockCall.mockResolvedValueOnce({ "0": "0xlend456" });
   const payload = { bondId: "0xbond", lender: "0xl", borrower: "0xb", amount: 1000, feeRateBps: 50, tenor: 30, haircut: 5 };
   const res = await app.inject({ method: "POST", url: "/lending/initiate-with-haircut", payload });
@@ -227,7 +227,7 @@ test("POST /lending/initiate-with-haircut returns lendId", async () => {
 });
 
 test("POST /lending/initiate-v2 returns ok", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const payload = { bondId: "0xbond", lender: "0xl", borrower: "0xb", amount: 1000, feeRateBps: 50, tenor: 30 };
   const res = await app.inject({ method: "POST", url: "/lending/initiate-v2", payload });
   expect(res.statusCode).toBe(200);
@@ -235,21 +235,21 @@ test("POST /lending/initiate-v2 returns ok", async () => {
 });
 
 test("POST /lending/return calls returnSecurities", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/lending/return", payload: { lendId: "0xlend" } });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "returnSecurities", { lendId: "0xlend" });
 });
 
 test("POST /lending/recall calls recallLoan", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/lending/recall", payload: { lendId: "0xlend" } });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "recallLoan", { lendId: "0xlend" });
 });
 
 test("POST /lending/default calls defaultOnLoan", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: "/lending/default", payload: { lendId: "0xlend" } });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "defaultOnLoan", { lendId: "0xlend" });

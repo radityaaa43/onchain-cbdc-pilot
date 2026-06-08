@@ -34,7 +34,7 @@ test("POST /redemption/request returns 400 on missing fields", async () => {
 });
 
 test("POST /redemption/process calls processRedemption tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/redemption/process",
     payload: { requestId: "0xreqid" },
@@ -92,7 +92,7 @@ test("GET /redemption/total/:address returns total", async () => {
 // ── CBDCBalanceLimitService ────────────────────────────────────────────────
 
 test("POST /balance-limit/set calls setLimit tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/balance-limit/set",
     payload: { account: "0xabc", limit: 10000 },
@@ -123,7 +123,7 @@ test("GET /balance-limit/:address/check returns 400 without amount", async () =>
 // ── CBDCDailyLimitService ──────────────────────────────────────────────────
 
 test("POST /daily-limit/set calls setDailyLimit tx", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({
     method: "POST", url: "/daily-limit/set",
     payload: { account: "0xabc", limit: 5000 },

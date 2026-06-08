@@ -34,7 +34,7 @@ test("POST /dvp/initiate returns settlementId", async () => {
 });
 
 test("POST /dvp/:settlementId/confirm calls confirmDVP", async () => {
-  mockTx.mockResolvedValueOnce(undefined);
+  mockTx.mockResolvedValueOnce({});
   const res = await app.inject({ method: "POST", url: `/dvp/${settlementId}/confirm` });
   expect(res.statusCode).toBe(200);
   expect(mockTx).toHaveBeenCalledWith(expect.any(String), "confirmDVP", { settlementId });
