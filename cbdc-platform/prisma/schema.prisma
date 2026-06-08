@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Org {
+  id              String       @id @default(cuid())
+  name            String
+  type            OrgType
+  onchainAddress  String
+  paladinIdentity String
+  isSelf          Boolean      @default(false)
+  users           User[]
+  allocations     Allocation[]
+  createdAt       DateTime     @default(now())
+}
+
+model User {
+  id           String     @id @default(cuid())
+  orgId        String
+  org          Org        @relation(fields: [orgId], references: [id])
+  email        String     @unique
+  passwordHash String
+  name         String
+  status       UserStatus @default(ACTIVE)
+  roles        UserRole[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role
+
+  @@unique([userId, role])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orgId     String
+  action    String
+  target    String?
+  payload   Json
+  txHash    String?
+  result    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+}
+
+model Operation {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  userId         String
+  orgId          String
+  action         String
+  status         OpStatus @default(PENDING)
+  request        Json
+  txHash         String?
+  result         Json?
+  error          String?
+  steps          Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Instrument {
+  id                 String           @id @default(cuid())
+  assetType          String
+  status             InstrumentStatus @default(DRAFT)
+  name               String
+  symbol             String
+  isin               String?
+  currency           String           @default("IDR")
+  tokenAddress       String
+  bondId             String?          @unique
+  couponRateBps      Int?
+  maturityDate       DateTime?
+  principalAmount    String?
+  dayCount           Int?
+  finalRedemptionPct Int?
+  isSyariah          Boolean          @default(false)
+  shariahBoard       String?
+  decimals           Int?
+  configJson         Json?
+  createdById        String
+  auctions           AuctionRound[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model AuctionRound {
+  id           String        @id @default(cuid())
+  instrumentId String
+  instrument   Instrument    @relation(fields: [instrumentId], references: [id])
+  bondId       String?
+  isin         String
+  name         String
+  auctionType  String        @default("DIRECT_ALLOCATION")
+  status       AuctionStatus @default(DRAFT)
+  allocations  Allocation[]
+  createdById  String
+  createdAt    DateTime      @default(now())
+}
+
+model Allocation {
+  id           String       @id @default(cuid())
+  auctionId    String
+  auction      AuctionRound @relation(fields: [auctionId], references: [id])
+  orgId        String
+  org          Org          @relation(fields: [orgId], references: [id])
+  bondAmount   String
+  price        String
+  cbdcAmount   String
+  settlementId String?
+  txHash       String?
+  settled      Boolean      @default(false)
+}
+
+enum OrgType {
+  CENTRAL_BANK
+  BANK
+  PRIMARY_DEALER
+  CUSTODIAN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum OpStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum InstrumentStatus {
+  DRAFT
+  CREATED
+  PUBLISHED
+  RELEASED
+  SETTLED
+}
+
+enum AuctionStatus {
+  DRAFT
+  ALLOCATED
+  SETTLED
+}
+
+enum Role {
+  OPERATOR_ADMIN
+  ISSUANCE_OFFICER
+  COMPLIANCE_OFFICER
+  PARTICIPANT_ADMIN
+  TRADER
+  OPS
+  COMPLIANCE_VIEWER
+}
