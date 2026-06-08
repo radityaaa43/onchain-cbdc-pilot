@@ -218,10 +218,10 @@ export async function bondLifecycleRoute(app: FastifyInstance): Promise<void> {
 
   // ── RedemptionService ───────────────────────────────────────────────────────
 
-  app.post("/redemption/redeem", async (req, reply) => {
+  app.post("/bond-redemption/redeem", async (req, reply) => {
     const p = RedeemBody.safeParse(req.body);
     if (!p.success) return reply.code(400).send({ error: p.error.flatten() });
-    await tx(config.contracts.cbdcRedemption, "redeem", {
+    await tx(config.contracts.bondRedemption, "redeem", {
       bondId: p.data.bondId,
       holder: p.data.holder,
       amount: p.data.amount,
@@ -229,24 +229,24 @@ export async function bondLifecycleRoute(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get<{ Params: { bondId: string } }>("/redemption/redeemed-total/:bondId", async (req, reply) => {
+  app.get<{ Params: { bondId: string } }>("/bond-redemption/redeemed-total/:bondId", async (req, reply) => {
     const parsed = BondId.safeParse(req.params.bondId);
     if (!parsed.success) return reply.code(400).send({ error: "invalid bondId" });
-    const res = await call(config.contracts.cbdcRedemption, "getRedeemedTotal", { bondId: parsed.data });
+    const res = await call(config.contracts.bondRedemption, "getRedeemedTotal", { bondId: parsed.data });
     return { bondId: parsed.data, redeemedTotal: String(res["0"]) };
   });
 
-  app.get<{ Params: { bondId: string } }>("/redemption/total/:bondId", async (req, reply) => {
+  app.get<{ Params: { bondId: string } }>("/bond-redemption/total/:bondId", async (req, reply) => {
     const parsed = BondId.safeParse(req.params.bondId);
     if (!parsed.success) return reply.code(400).send({ error: "invalid bondId" });
-    const res = await call(config.contracts.cbdcRedemption, "getRedemptionTotal", { bondId: parsed.data });
+    const res = await call(config.contracts.bondRedemption, "getRedemptionTotal", { bondId: parsed.data });
     return { bondId: parsed.data, redemptionTotal: String(res["0"]) };
   });
 
-  app.get<{ Params: { bondId: string } }>("/redemption/funding/:bondId", async (req, reply) => {
+  app.get<{ Params: { bondId: string } }>("/bond-redemption/funding/:bondId", async (req, reply) => {
     const parsed = BondId.safeParse(req.params.bondId);
     if (!parsed.success) return reply.code(400).send({ error: "invalid bondId" });
-    const res = await call(config.contracts.cbdcRedemption, "hasSufficientFunding", { bondId: parsed.data });
+    const res = await call(config.contracts.bondRedemption, "hasSufficientFunding", { bondId: parsed.data });
     return {
       bondId: parsed.data,
       sufficient: Boolean(res["sufficient"] ?? res["0"]),
