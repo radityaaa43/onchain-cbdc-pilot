@@ -44,8 +44,8 @@ export function CustodyView() {
       <Card className="p-4 bg-card/80 border-border">
         <h2 className="font-mono text-sm mb-3">Holdings Lookup</h2>
         <form onSubmit={lookupHoldings} className="flex flex-wrap gap-3 items-end">
-          <div className="space-y-2 flex-1 min-w-40"><Label>Custodian address</Label><Input name="custodian" required placeholder="0x..." /></div>
-          <div className="space-y-2 flex-1 min-w-40"><Label>Bond ID</Label><Input name="bondId" required placeholder="0x..." /></div>
+          <div className="space-y-2 flex-1 min-w-40"><Label htmlFor="custodian">Custodian address</Label><Input id="custodian" name="custodian" required placeholder="0x..." /></div>
+          <div className="space-y-2 flex-1 min-w-40"><Label htmlFor="bondId">Bond ID</Label><Input id="bondId" name="bondId" required placeholder="0x..." /></div>
           <Button type="submit" disabled={loading}>Lookup</Button>
         </form>
         {holdings && (
@@ -59,7 +59,7 @@ export function CustodyView() {
       <Card className="p-4 bg-card/80 border-border">
         <h2 className="font-mono text-sm mb-3">Register Custodian</h2>
         <form onSubmit={registerCustodian} className="flex gap-3 items-end">
-          <div className="space-y-2 flex-1"><Label>Custodian address</Label><Input name="newCustodian" required placeholder="0x..." /></div>
+          <div className="space-y-2 flex-1"><Label htmlFor="newCustodian">Custodian address</Label><Input id="newCustodian" name="newCustodian" required placeholder="0x..." /></div>
           <Button type="submit" disabled={loading}>Register</Button>
         </form>
       </Card>
