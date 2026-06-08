@@ -13,7 +13,8 @@ export type Permission =
   | "repo.view" | "repo.trade"
   | "lending.view" | "lending.trade"
   | "pledge.view" | "pledge.manage"
-  | "custody.view" | "custody.manage";
+  | "custody.view" | "custody.manage"
+  | "corporate.view" | "corporate.manage";
 
 const GRANTS: Record<Role, Permission[]> = {
   OPERATOR_ADMIN: [
@@ -28,6 +29,7 @@ const GRANTS: Record<Role, Permission[]> = {
     "lending.view", "lending.trade",
     "pledge.view", "pledge.manage",
     "custody.view", "custody.manage",
+    "corporate.view", "corporate.manage",
   ],
   ISSUANCE_OFFICER: [
     "cbdc.view", "cbdc.issue", "cbdc.redeem.process",
@@ -40,6 +42,7 @@ const GRANTS: Record<Role, Permission[]> = {
     "lending.view", "lending.trade",
     "pledge.view", "pledge.manage",
     "custody.view", "custody.manage",
+    "corporate.view", "corporate.manage",
   ],
   COMPLIANCE_OFFICER: ["compliance.view", "compliance.manage", "audit.view"],
   PARTICIPANT_ADMIN: ["user.manage", "audit.view", "repo.view", "lending.view", "pledge.view", "custody.view"],
