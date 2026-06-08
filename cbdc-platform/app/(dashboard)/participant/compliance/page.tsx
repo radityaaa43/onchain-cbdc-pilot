@@ -38,7 +38,7 @@ export default async function ParticipantCompliancePage() {
           <KpiCard label="AML Eligible"  value={genStatus.isEligible  ? "Yes" : "No"} accent={genStatus.isEligible} />
           <KpiCard label="Suspended"     value={genStatus.isSuspended ? "Yes" : "No"} />
           <KpiCard label="Risk Category" value={genStatus.riskCategory} />
-          <KpiCard label="Last Review"   value={genStatus.lastReviewDate ? new Date(Number(genStatus.lastReviewDate) * 1000).toLocaleDateString() : "—"} />
+          <KpiCard label="Last Review"   value={genStatus.lastReviewDate && genStatus.lastReviewDate !== "0" ? new Date(Number(genStatus.lastReviewDate) * 1000).toLocaleDateString() : "—"} />
         </div>
       )}
       {!genStatus && (

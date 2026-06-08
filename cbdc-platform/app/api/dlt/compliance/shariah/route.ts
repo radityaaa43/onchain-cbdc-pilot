@@ -9,7 +9,7 @@ const Addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 const B32  = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 
 const ApproveSukukBody  = z.object({ action: z.literal("approve-sukuk"), bondId: B32, shariahBoard: Addr });
-const CertifyProfitBody = z.object({ action: z.literal("certify-profit"), bondId: B32, totalProfit: z.number().positive(), investorShare: z.number().positive() });
+const CertifyProfitBody = z.object({ action: z.literal("certify-profit"), bondId: B32, totalProfit: z.number().nonnegative(), investorShare: z.number().nonnegative() });
 const EventBody         = z.object({ action: z.literal("event"), bondId: B32, eventType: z.string().min(1) });
 const Body = z.discriminatedUnion("action", [ApproveSukukBody, CertifyProfitBody, EventBody]);
 

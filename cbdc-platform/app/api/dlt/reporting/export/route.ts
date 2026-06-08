@@ -8,8 +8,8 @@ export async function GET(req: Request) {
     await requirePermission("compliance.view");
     const { searchParams } = new URL(req.url);
     if (searchParams.get("paginated") === "true") {
-      const offset = Number(searchParams.get("offset") ?? "0");
-      const limit  = Number(searchParams.get("limit") ?? "20");
+      const offset = Math.max(0, Number(searchParams.get("offset") ?? "0") || 0);
+      const limit  = Math.max(1, Math.min(100, Number(searchParams.get("limit") ?? "20") || 20));
       return NextResponse.json(await reporting.exportPaginated({ offset, limit }));
     }
     const assetId   = searchParams.get("assetId") ?? "";
