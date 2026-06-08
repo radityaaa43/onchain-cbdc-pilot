@@ -37,9 +37,6 @@ contract CBDCRedemptionService is Initializable, AccessControlUpgradeable, UUPSU
     event Processed(bytes32 indexed requestId, address indexed user, uint256 amount);
     event TokensRedeemed(address indexed account, uint256 amount, address indexed redeemer);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address cbToken_, address admin_) external initializer {
         if (cbToken_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
@@ -60,7 +57,7 @@ contract CBDCRedemptionService is Initializable, AccessControlUpgradeable, UUPSU
             user: user,
             amount: amount,
             processed: false,
-            timestamp: block.timestamp
+            timestamp: 0
         });
         requestExists[requestId] = true;
         emit RedemptionRequested(requestId, user, amount);

@@ -53,9 +53,6 @@ contract CouponService is
     event MetadataRegistrySet(bytes32 indexed bondId, address registry);
     event DayCountConventionSet(bytes32 indexed bondId, uint256 convention);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(
         address token_,
         address lifecycle_,
@@ -169,12 +166,13 @@ contract CouponService is
         if (balance < couponAmount) revert InsufficientCouponFunds(bondId, couponAmount, balance);
 
         // CEI: update state before external call
-        lastCouponTimestamp[bondId] = block.timestamp;
+        // block.timestamp intentionally set to 0: non-deterministic in Paladin Pente multi-node simulation
+        lastCouponTimestamp[bondId] = 0;
         couponPayments[bondId][couponId] = CouponPayment({
             couponId: couponId,
             bondId: bondId,
             amount: couponAmount,
-            paymentDate: block.timestamp,
+            paymentDate: 0,
             isPaid: true
         });
         couponCount[bondId] = couponId + 1;
@@ -208,12 +206,13 @@ contract CouponService is
         if (balance < totalCoupon) revert InsufficientCouponFunds(bondId, totalCoupon, balance);
 
         // CEI: update state before external calls
-        lastCouponTimestamp[bondId] = block.timestamp;
+        // block.timestamp intentionally set to 0: non-deterministic in Paladin Pente multi-node simulation
+        lastCouponTimestamp[bondId] = 0;
         couponPayments[bondId][couponId] = CouponPayment({
             couponId: couponId,
             bondId: bondId,
             amount: totalCoupon,
-            paymentDate: block.timestamp,
+            paymentDate: 0,
             isPaid: true
         });
         couponCount[bondId] = couponId + 1;

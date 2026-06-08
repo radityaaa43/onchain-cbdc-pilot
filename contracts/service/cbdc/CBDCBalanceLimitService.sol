@@ -21,9 +21,6 @@ contract CBDCBalanceLimitService is Initializable, AccessControlUpgradeable, UUP
 
     event LimitSet(address indexed account, uint256 newLimit);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();

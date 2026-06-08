@@ -24,9 +24,6 @@ contract CustodyService is Initializable, AccessControlUpgradeable, UUPSUpgradea
     event CustodianRegistered(address custodian);
     event BeneficialOwnerSet(bytes32 bondId, address custodian, bytes32 subAccountId, address owner);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address token_, address admin_) external initializer {
         if (token_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();

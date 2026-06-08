@@ -26,9 +26,6 @@ contract PolicyEngineService is Initializable, AccessControlUpgradeable, UUPSUpg
     event PolicyRuleRemoved(bytes32 indexed ruleId);
     event DefaultPolicySet(address policyAddress);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address policyRunner_, address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();

@@ -29,9 +29,6 @@ contract DFABIComplianceService is Initializable, AccessControlUpgradeable, UUPS
     event EligibilityByBondSet(bytes32 bondId, address participant, bool eligible);
     event RestrictionSet(bytes32 bondId);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();

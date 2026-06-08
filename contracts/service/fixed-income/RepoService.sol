@@ -71,9 +71,6 @@ contract RepoService is
     event MarginCallInitiated(bytes32 indexed repoId, address indexed initiator, uint256 marginDeficit, uint256 deadline);
     event MarginCallSettled(bytes32 indexed repoId, uint256 amount);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address token_, address lifecycle_, address cbToken_, address admin_) external initializer {
         if (token_ == address(0)) revert ZeroAddress();
         if (lifecycle_ == address(0)) revert ZeroAddress();
@@ -195,7 +192,7 @@ contract RepoService is
             : 0;
 
         repo.marginCallActive = true;
-        repo.marginCallDeadline = block.timestamp + 1 days;
+        repo.marginCallDeadline = 0;
 
         emit MarginCallInitiated(repoId, msg.sender, marginDeficit, repo.marginCallDeadline);
     }
@@ -231,7 +228,7 @@ contract RepoService is
     ) internal returns (bytes32 repoId) {
         if (amount == 0) revert ZeroAmount();
 
-        repoId = keccak256(abi.encode(++_repoNonce, bondId, seller, buyer, block.timestamp));
+        repoId = keccak256(abi.encode(++_repoNonce, bondId, seller, buyer));
 
         // Effective purchase price = marketPrice × (1 - haircut/10000)
         uint256 effectivePurchasePrice = marketPrice * (10000 - haircut) / 10000;
@@ -248,8 +245,8 @@ contract RepoService is
             purchasePrice: effectivePurchasePrice,
             repurchasePrice: repurchasePrice,
             tenor: tenor,
-            startDate: block.timestamp,
-            endDate: block.timestamp + tenor * 1 days,
+            startDate: 0,
+            endDate: 0,
             status: RepoStatus.ACTIVE,
             sellerConsentEarlyTermination: false,
             buyerConsentEarlyTermination: false,

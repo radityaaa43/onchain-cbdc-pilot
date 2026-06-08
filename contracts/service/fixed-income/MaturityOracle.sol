@@ -28,9 +28,6 @@ contract MaturityOracle is Initializable, AccessControlUpgradeable, UUPSUpgradea
     event BondUntracked(bytes32 bondId);
     event MaturityTriggered(bytes32 bondId);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address maturityService_, address admin_) external initializer {
         if (maturityService_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();

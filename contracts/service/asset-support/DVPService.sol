@@ -59,8 +59,6 @@ contract DVPService is
     event DVPAffirmed(bytes32 indexed settlementId, address indexed affirmer);
     event CouponServiceSet(address indexed couponService);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(
         address fixedIncomeToken_,
@@ -111,7 +109,7 @@ contract DVPService is
         if (cbdcAmount == 0) revert ZeroAmount();
         if (bondSeller == address(0) || bondBuyer == address(0)) revert InvalidParties();
 
-        settlementId = keccak256(abi.encode(bondId, bondSeller, bondBuyer, block.timestamp, ++_settlementCounter));
+        settlementId = keccak256(abi.encode(bondId, bondSeller, bondBuyer, ++_settlementCounter));
 
         _settlements[settlementId] = DVPSettlement({
             settlementId: settlementId,
@@ -125,7 +123,7 @@ contract DVPService is
             cbdcAmount: cbdcAmount,
             model: model,
             status: SettlementStatus.PENDING,
-            createdAt: block.timestamp,
+            createdAt: 0,
             settlementDeadline: 0,
             sellerAffirmed: false,
             buyerAffirmed: false,
@@ -147,13 +145,13 @@ contract DVPService is
         address cbdcPayee,
         uint256 cbdcAmount,
         SettlementModel model,
-        uint256 settlementWindowSeconds
+        uint256 settlementDeadline
     ) external nonReentrant onlyRole(SETTLEMENT_ROLE) returns (bytes32 settlementId) {
         if (bondAmount == 0) revert ZeroAmount();
         if (cbdcAmount == 0) revert ZeroAmount();
         if (bondSeller == address(0) || bondBuyer == address(0)) revert InvalidParties();
 
-        settlementId = keccak256(abi.encode(bondId, bondSeller, bondBuyer, block.timestamp, ++_settlementCounter));
+        settlementId = keccak256(abi.encode(bondId, bondSeller, bondBuyer, ++_settlementCounter));
 
         _settlements[settlementId] = DVPSettlement({
             settlementId: settlementId,
@@ -167,8 +165,8 @@ contract DVPService is
             cbdcAmount: cbdcAmount,
             model: model,
             status: SettlementStatus.AWAITING_AFFIRMATION,
-            createdAt: block.timestamp,
-            settlementDeadline: block.timestamp + settlementWindowSeconds,
+            createdAt: 0,
+            settlementDeadline: settlementDeadline,
             sellerAffirmed: false,
             buyerAffirmed: false,
             failureReason: ""

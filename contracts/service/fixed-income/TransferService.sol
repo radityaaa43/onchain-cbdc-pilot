@@ -27,9 +27,6 @@ contract TransferService is Initializable, AccessControlUpgradeable, UUPSUpgrade
     event TransferCompleted(bytes32 indexed bondId, address indexed from, address indexed to, uint256 amount);
     event BatchTransferCompleted(bytes32 indexed bondId, uint256 count);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(
         address token_,
         address lifecycle_,

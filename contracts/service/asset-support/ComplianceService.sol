@@ -32,9 +32,6 @@ contract ComplianceService is Initializable, AccessControlUpgradeable, UUPSUpgra
     event ParticipantUnsuspended(address indexed participant);
     event RiskCategoryChanged(address indexed participant, string category);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();
@@ -47,7 +44,7 @@ contract ComplianceService is Initializable, AccessControlUpgradeable, UUPSUpgra
 
     function setEligibleParticipant(address participant, bytes32 assetId, bool eligible) external onlyRole(COMPLIANCE_ADMIN_ROLE) {
         _eligibleParticipants[participant][assetId] = eligible;
-        _participantInfo[participant].lastReviewDate = block.timestamp;
+        _participantInfo[participant].lastReviewDate = 0;
         emit ParticipantEligibilitySet(participant, assetId, eligible);
     }
 

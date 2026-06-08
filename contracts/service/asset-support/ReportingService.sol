@@ -20,8 +20,9 @@ contract ReportingService is Initializable, AccessControlUpgradeable, UUPSUpgrad
     mapping(address => uint256[]) private _entityTransactionIds;
     mapping(address => bytes32[]) private _entitySARIds;
     mapping(bytes32 => SARRecord) private _sarRecords;
+    uint256 private _sarCount;
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     event TransactionLogged(
         bytes32 indexed assetId,
@@ -32,9 +33,6 @@ contract ReportingService is Initializable, AccessControlUpgradeable, UUPSUpgrad
         uint256 timestamp
     );
     event SARGenerated(bytes32 indexed reportId, address indexed entity, uint256 timestamp);
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
@@ -51,7 +49,6 @@ contract ReportingService is Initializable, AccessControlUpgradeable, UUPSUpgrad
         onlyRole(REPORTER_ROLE)
     {
         uint256 txId = _transactionCount++;
-        uint256 timestamp = block.timestamp;
 
         _transactions[txId] = TransactionRecord({
             assetId: assetId,
@@ -59,14 +56,14 @@ contract ReportingService is Initializable, AccessControlUpgradeable, UUPSUpgrad
             to: to,
             amount: amount,
             ref: ref,
-            timestamp: timestamp,
+            timestamp: 0,
             blockNumber: block.number
         });
 
         _entityTransactionIds[from].push(txId);
         _entityTransactionIds[to].push(txId);
 
-        emit TransactionLogged(assetId, from, to, amount, ref, timestamp);
+        emit TransactionLogged(assetId, from, to, amount, ref, 0);
     }
 
     function getTransactions(address entity, uint256 fromBlock, uint256 toBlock)
@@ -93,15 +90,15 @@ contract ReportingService is Initializable, AccessControlUpgradeable, UUPSUpgrad
     }
 
     function generateSAR(address entity) external onlyRole(REPORTER_ROLE) returns (bytes32 reportId) {
-        reportId = keccak256(abi.encode(entity, block.timestamp, _entitySARIds[entity].length));
+        reportId = keccak256(abi.encode(entity, _sarCount++, _entitySARIds[entity].length));
         _sarRecords[reportId] = SARRecord({
             reportId: reportId,
             entity: entity,
-            timestamp: block.timestamp,
+            timestamp: 0,
             filed: true
         });
         _entitySARIds[entity].push(reportId);
-        emit SARGenerated(reportId, entity, block.timestamp);
+        emit SARGenerated(reportId, entity, 0);
     }
 
     /// @dev Unbounded scan — kept for backwards compatibility. Use exportTransactionLogPaginated for large datasets.

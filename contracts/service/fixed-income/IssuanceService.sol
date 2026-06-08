@@ -28,8 +28,6 @@ contract IssuanceService is Initializable, AccessControlUpgradeable, UUPSUpgrade
     event BondIssued(bytes32 indexed bondId, address indexed investor, uint256 amount);
     event BatchBondIssued(bytes32 indexed bondId, address[] investors, uint256 totalAmount);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(address token_, address lifecycle_, address admin_) external initializer {
         if (token_ == address(0)) revert ZeroAddress();

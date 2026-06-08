@@ -47,9 +47,6 @@ contract PledgeService is
     event PledgeReleased(bytes32 indexed pledgeId);
     event PledgeEnforced(bytes32 indexed pledgeId);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address token_, address lifecycle_, address admin_) external initializer {
         if (token_ == address(0)) revert ZeroAddress();
         if (lifecycle_ == address(0)) revert ZeroAddress();

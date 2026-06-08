@@ -34,9 +34,6 @@ contract TokenGatewayService is Initializable, AccessControlUpgradeable, UUPSUpg
 
     event AssetCreated(bytes32 indexed assetId, address indexed assetAddress, AssetType assetType);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address assetRegistry_, address admin_) external initializer {
         if (assetRegistry_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
@@ -76,7 +73,7 @@ contract TokenGatewayService is Initializable, AccessControlUpgradeable, UUPSUpg
         _assetInfo[assetId] = AssetInfo({
             assetAddress: assetAddress,
             assetType: assetType,
-            createdAt: block.timestamp
+            createdAt: 0
         });
 
         emit AssetCreated(assetId, assetAddress, assetType);

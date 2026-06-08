@@ -45,9 +45,6 @@ contract ShariahComplianceService is Initializable, AccessControlUpgradeable, UU
     event ProfitDistributionCertified(bytes32 indexed bondId, uint256 totalProfit, uint256 investorShare, bool compliant, uint256 timestamp);
     event ShariahEventReported(bytes32 indexed bondId, string eventType, uint256 timestamp);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();
@@ -63,7 +60,7 @@ contract ShariahComplianceService is Initializable, AccessControlUpgradeable, UU
         _shariahApprovals[bondId] = ShariahApproval({
             approved: true,
             board: shariahBoard,
-            approvalTimestamp: block.timestamp
+            approvalTimestamp: 0
         });
         emit SukukApproved(bondId, shariahBoard, block.timestamp);
     }
@@ -85,7 +82,7 @@ contract ShariahComplianceService is Initializable, AccessControlUpgradeable, UU
             totalProfit: totalProfit,
             investorShare: investorShare,
             certified: compliant,
-            certificationTimestamp: block.timestamp
+            certificationTimestamp: 0
         });
         emit ProfitDistributionCertified(bondId, totalProfit, investorShare, compliant, block.timestamp);
     }
@@ -94,7 +91,7 @@ contract ShariahComplianceService is Initializable, AccessControlUpgradeable, UU
         if (!_shariahApprovals[bondId].approved) revert SukukNotShariahApproved(bondId);
         _shariahEvents[bondId].push(ShariahEvent({
             eventType: eventType,
-            timestamp: block.timestamp,
+            timestamp: 0,
             description: ""
         }));
         emit ShariahEventReported(bondId, eventType, block.timestamp);

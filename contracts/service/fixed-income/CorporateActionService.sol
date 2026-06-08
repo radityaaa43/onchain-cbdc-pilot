@@ -121,9 +121,6 @@ contract CorporateActionService is
     event ConsentVoted(bytes32 indexed proposalId, address indexed voter, bool inFavor, uint256 weight);
     event ConsentFinalized(bytes32 indexed proposalId, bool passed);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(
         address token_,
         address lifecycle_,
@@ -297,7 +294,7 @@ contract CorporateActionService is
         uint256 newCouponRateBps,
         uint256 newMaturityExtDays
     ) external onlyRole(CORPORATE_ACTION_ROLE) returns (bytes32 proposalId) {
-        proposalId = keccak256(abi.encode(++_restructuringNonce, bondId, block.timestamp));
+        proposalId = keccak256(abi.encode(++_restructuringNonce, bondId));
         restructurings[proposalId] = RestructuringProposal({
             bondId: bondId,
             newCouponRateBps: newCouponRateBps,
@@ -313,7 +310,7 @@ contract CorporateActionService is
     // Pente-compat: no return value
     function proposeRestructuringV2(bytes32 bondId, uint256 newCouponRateBps, uint256 newMaturityExtDays)
         external onlyRole(CORPORATE_ACTION_ROLE) {
-        bytes32 proposalId = keccak256(abi.encode(++_restructuringNonce, bondId, block.timestamp));
+        bytes32 proposalId = keccak256(abi.encode(++_restructuringNonce, bondId));
         _lastProposalId = proposalId;
         restructurings[proposalId] = RestructuringProposal({ bondId: bondId, newCouponRateBps: newCouponRateBps, newMaturityExtDays: newMaturityExtDays, status: RestructuringStatus.PROPOSED, issuerApproved: false, adminApproved: false });
         emit RestructuringProposed(proposalId, bondId);
@@ -427,11 +424,11 @@ contract CorporateActionService is
         uint256 votingDurationDays,
         uint256 quorumBps
     ) external onlyRole(CORPORATE_ACTION_ROLE) returns (bytes32 proposalId) {
-        proposalId = keccak256(abi.encode(++_consentNonce, bondId, block.timestamp));
+        proposalId = keccak256(abi.encode(++_consentNonce, bondId));
         consentProposals[proposalId] = ConsentProposal({
             bondId: bondId,
             description: description,
-            votingDeadline: block.timestamp + votingDurationDays * 1 days,
+            votingDeadline: 0,
             quorumBps: quorumBps,
             votesFor: 0,
             votesAgainst: 0,
@@ -445,9 +442,9 @@ contract CorporateActionService is
     // Pente-compat: no return value; no string param (avoids Pente issues)
     function proposeConsentV2(bytes32 bondId, uint256 votingDurationDays, uint256 quorumBps)
         external onlyRole(CORPORATE_ACTION_ROLE) {
-        bytes32 proposalId = keccak256(abi.encode(++_consentNonce, bondId, block.timestamp));
+        bytes32 proposalId = keccak256(abi.encode(++_consentNonce, bondId));
         _lastProposalId = proposalId;
-        consentProposals[proposalId] = ConsentProposal({ bondId: bondId, description: "", votingDeadline: block.timestamp + votingDurationDays * 1 days, quorumBps: quorumBps, votesFor: 0, votesAgainst: 0, status: ConsentStatus.ACTIVE, finalized: false });
+        consentProposals[proposalId] = ConsentProposal({ bondId: bondId, description: "", votingDeadline: 0, quorumBps: quorumBps, votesFor: 0, votesAgainst: 0, status: ConsentStatus.ACTIVE, finalized: false });
         emit ConsentProposed(proposalId, bondId, block.timestamp + votingDurationDays * 1 days);
     }
 
@@ -456,10 +453,8 @@ contract CorporateActionService is
     /// @notice Holder votes on a consent proposal. Weight = SECONDARY balance.
     function voteConsent(bytes32 proposalId, bool inFavor) external {
         ConsentProposal storage prop = consentProposals[proposalId];
-        if (prop.votingDeadline == 0) revert ConsentProposalNotFound(proposalId);
+        if (prop.bondId == bytes32(0)) revert ConsentProposalNotFound(proposalId);
         if (prop.finalized) revert ConsentAlreadyFinalized(proposalId);
-        if (block.timestamp > prop.votingDeadline)
-            revert ConsentVotingExpired(proposalId, prop.votingDeadline, block.timestamp);
         if (_hasVotedConsent[proposalId][msg.sender]) revert AlreadyVoted(proposalId, msg.sender);
 
         uint256 weight = token.balanceOfByBond(prop.bondId, SECONDARY, msg.sender);
@@ -477,7 +472,7 @@ contract CorporateActionService is
     /// @notice Finalize consent after voting deadline. Checks quorum against SECONDARY supply.
     function finalizeConsent(bytes32 proposalId) external onlyRole(CORPORATE_ACTION_ROLE) {
         ConsentProposal storage prop = consentProposals[proposalId];
-        if (prop.votingDeadline == 0) revert ConsentProposalNotFound(proposalId);
+        if (prop.bondId == bytes32(0)) revert ConsentProposalNotFound(proposalId);
         if (prop.finalized) revert ConsentAlreadyFinalized(proposalId);
 
         uint256 totalSupply = token.totalSupplyByBond(prop.bondId, SECONDARY);

@@ -38,5 +38,33 @@ export const config = {
     cbdcIssuance:   required("CONTRACT_CBDC_ISSUANCE_SERVICE"),
     cbdcTransfer:   required("CONTRACT_CBDC_TRANSFER_SERVICE"),
     bondIssuance:   required("CONTRACT_BOND_ISSUANCE_SERVICE"),
+    cbdcRedemption:   required("CONTRACT_CBDC_REDEMPTION_SERVICE"),
+    cbdcBalanceLimit: required("CONTRACT_CBDC_BALANCE_LIMIT_SERVICE"),
+    cbdcDailyLimit:   required("CONTRACT_CBDC_DAILY_LIMIT_SERVICE"),
+    // Bond lifecycle
+    couponService:      required("CONTRACT_COUPON_SERVICE"),
+    couponCalculator:   required("CONTRACT_COUPON_CALCULATOR"),
+    maturityService:    required("CONTRACT_MATURITY_SERVICE"),
+    maturityOracle:     required("CONTRACT_MATURITY_ORACLE"),
+    bondRedemption:     required("CONTRACT_BOND_REDEMPTION_SERVICE"),
+    transferService:    required("CONTRACT_TRANSFER_SERVICE"),
+    corporateAction:    required("CONTRACT_CORPORATE_ACTION_SERVICE"),
+    // Bond advanced
+    custodyService:     required("CONTRACT_CUSTODY_SERVICE"),
+    pledgeService:      required("CONTRACT_PLEDGE_SERVICE"),
+    repoService:        required("CONTRACT_REPO_SERVICE"),
+    securitiesLending:  required("CONTRACT_SECURITIES_LENDING_SERVICE"),
+    // Compliance
+    complianceService:  required("CONTRACT_COMPLIANCE_SERVICE"),
+    dfabiCompliance:    required("CONTRACT_DFABI_COMPLIANCE_SERVICE"),
+    shariahCompliance:  required("CONTRACT_SHARIAH_COMPLIANCE_SERVICE"),
+    policyEngine:       required("CONTRACT_POLICY_ENGINE_SERVICE"),
+    // Infrastructure
+    netting:            required("CONTRACT_NETTING_SERVICE"),
+    oracle:             required("CONTRACT_ORACLE_SERVICE"),
+    reporting:          required("CONTRACT_REPORTING_SERVICE"),
+    tokenGateway:       required("CONTRACT_CBDC_TOKEN_GATEWAY_SERVICE"),
+    settlementFailure:  required("CONTRACT_SETTLEMENT_FAILURE_SERVICE"),
+    assetRegistry:      required("CONTRACT_ASSET_REGISTRY"),
   },
 } as const;

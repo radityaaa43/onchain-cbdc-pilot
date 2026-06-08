@@ -81,8 +81,6 @@ contract FixedIncomeToken is Initializable, ERC20Upgradeable, AccessControlUpgra
         return interfaceId == IERC1400_INTERFACE_ID || interfaceId == IERC20_INTERFACE_ID || super.supportsInterface(interfaceId);
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     /**
      * @notice Initialize the fixed income token.

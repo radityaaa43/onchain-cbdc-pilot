@@ -44,9 +44,6 @@ contract RedemptionService is
     event BondRedeemed(bytes32 indexed bondId, address indexed holder, uint256 amount, uint256 value);
     event BatchRedeemed(bytes32 indexed bondId, address[] holders, uint256[] amounts, uint256 totalValue);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(
         address token_,
         address lifecycle_,

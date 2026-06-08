@@ -15,6 +15,7 @@ import {ZeroAddress} from "../../library/Errors.sol";
 contract CBDCDailyLimitService is Initializable, AccessControlUpgradeable, UUPSUpgradeable, ICBDCDailyLimitService {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant SPENDER_ROLE = keccak256("SPENDER_ROLE");
+    uint256 public constant BLOCKS_PER_DAY = 7200; // ~12s block time
 
     mapping(address => uint256) public dailyLimits;
     mapping(address => uint256) public dailySpent;
@@ -24,9 +25,6 @@ contract CBDCDailyLimitService is Initializable, AccessControlUpgradeable, UUPSU
 
     event DailyLimitSet(address indexed account, uint256 limit);
     event DailySpentRecorded(address indexed account, uint256 amount, uint256 remaining);
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
@@ -49,7 +47,7 @@ contract CBDCDailyLimitService is Initializable, AccessControlUpgradeable, UUPSU
     }
 
     function getDailySpent(address account) external view returns (uint256) {
-        uint256 today = block.timestamp / 1 days;
+        uint256 today = block.number / BLOCKS_PER_DAY;
         if (lastResetDay[account] != today) return 0;
         return dailySpent[account];
     }
@@ -65,7 +63,7 @@ contract CBDCDailyLimitService is Initializable, AccessControlUpgradeable, UUPSU
     }
 
     function _resetIfNewDay(address account) internal {
-        uint256 today = block.timestamp / 1 days;
+        uint256 today = block.number / BLOCKS_PER_DAY;
         if (lastResetDay[account] != today) {
             lastResetDay[account] = today;
             dailySpent[account] = 0;

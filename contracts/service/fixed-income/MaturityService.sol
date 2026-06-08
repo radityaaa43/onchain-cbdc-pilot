@@ -36,9 +36,6 @@ contract MaturityService is Initializable, AccessControlUpgradeable, UUPSUpgrade
     event BondMatured(bytes32 indexed bondId, uint256 timestamp);
     event RedemptionServiceSet(address indexed redemptionService);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address lifecycleManager_, address admin_) external initializer {
         if (lifecycleManager_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();

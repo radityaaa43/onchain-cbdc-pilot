@@ -25,9 +25,6 @@ contract OracleService is Initializable, AccessControlUpgradeable, UUPSUpgradeab
     event PriceSet(bytes32 indexed bondId, uint256 price);
     event CreditEventReported(bytes32 indexed bondId, bytes32 indexed eventType, uint256 timestamp);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
         __AccessControl_init();

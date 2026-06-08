@@ -29,8 +29,6 @@ contract SettlementFailureService is Initializable, AccessControlUpgradeable, UU
     event BuyInInitiated(bytes32 indexed settlementId, uint256 gracePeriodEnd);
     event BuyInExecuted(bytes32 indexed settlementId, uint256 buyInAmount, uint256 buyInPriceBps, uint256 cost);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(address admin_) external initializer {
         if (admin_ == address(0)) revert ZeroAddress();
@@ -50,7 +48,7 @@ contract SettlementFailureService is Initializable, AccessControlUpgradeable, UU
             settlementId: settlementId,
             reason: reason,
             details: details,
-            timestamp: block.timestamp,
+            timestamp: 0,
             resolved: false
         });
         emit FailureReported(settlementId, reason, details);
@@ -83,7 +81,7 @@ contract SettlementFailureService is Initializable, AccessControlUpgradeable, UU
         if (bi.initiated) revert BuyInAlreadyExecuted(settlementId);
 
         bi.initiated = true;
-        bi.initiatedAt = block.timestamp;
+        bi.initiatedAt = 0;
 
         emit BuyInInitiated(settlementId, block.timestamp + BUY_IN_GRACE_PERIOD);
     }

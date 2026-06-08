@@ -50,10 +50,6 @@ contract CBToken is
     // Constructor / Initializer
     // ──────────────────────────────────────────────────────
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
 
     /**
      * @notice Initialize the CBDC token.

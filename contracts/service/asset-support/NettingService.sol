@@ -55,9 +55,6 @@ contract NettingService is
     event NettingSessionSettled(bytes32 indexed sessionId, uint256 grossCount, uint256 netTransfers);
     event NettingSessionCancelled(bytes32 indexed sessionId);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address cbToken_, address admin_) external initializer {
         if (cbToken_ == address(0)) revert ZeroAddress();
         if (admin_ == address(0)) revert ZeroAddress();
@@ -71,11 +68,11 @@ contract NettingService is
 
     /// @notice Open a new netting session. Returns sessionId.
     function openSession() external onlyRole(NETTING_OPERATOR_ROLE) returns (bytes32 sessionId) {
-        sessionId = keccak256(abi.encode(++_sessionCounter, block.timestamp, msg.sender));
+        sessionId = keccak256(abi.encode(++_sessionCounter, msg.sender));
         _sessions[sessionId] = NettingSession({
             sessionId: sessionId,
             status: SessionStatus.OPEN,
-            createdAt: block.timestamp,
+            createdAt: 0,
             entryCount: 0
         });
         emit NettingSessionOpened(sessionId);

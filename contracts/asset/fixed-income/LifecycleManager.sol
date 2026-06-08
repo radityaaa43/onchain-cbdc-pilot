@@ -83,8 +83,6 @@ contract LifecycleManager is
     // Constructor / Initializer
     // ──────────────────────────────────────────────────────
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     /**
      * @notice Initialize the lifecycle manager.
@@ -144,7 +142,7 @@ contract LifecycleManager is
         if (bond == address(0)) revert InvalidBondAddress();
 
         _bondCounter++;
-        bondId = keccak256(abi.encode(_bondCounter, bond, maturityDate, block.timestamp));
+        bondId = keccak256(abi.encode(_bondCounter, bond, maturityDate));
 
         _bondInfo[bondId] = BondInfo({
             bondAddress: bond,
@@ -161,7 +159,7 @@ contract LifecycleManager is
     function registerBondV2(address bond, uint256 maturityDate) external onlyLifecycleManager {
         if (bond == address(0)) revert InvalidBondAddress();
         _bondCounter++;
-        bytes32 bondId = keccak256(abi.encode(_bondCounter, bond, maturityDate, block.timestamp));
+        bytes32 bondId = keccak256(abi.encode(_bondCounter, bond, maturityDate));
         _bondInfo[bondId] = BondInfo({
             bondAddress: bond,
             maturityDate: maturityDate,

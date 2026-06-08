@@ -84,11 +84,11 @@ PYEOF
 )
 
 # Contract addresses
-NOTO_ADDR=$(kubectl get palaindomain.core.paladin.io noto -n paladin \
+NOTO_ADDR=$(kubectl get paladindomains.core.paladin.io noto -n paladin \
   -o jsonpath='{.status.registryAddress}' 2>/dev/null || echo "")
-PENTE_ADDR=$(kubectl get palaindomain.core.paladin.io pente -n paladin \
+PENTE_ADDR=$(kubectl get paladindomains.core.paladin.io pente -n paladin \
   -o jsonpath='{.status.registryAddress}' 2>/dev/null || echo "")
-REGISTRY_ADDR=$(kubectl get paladinregistry.core.paladin.io evm-registry -n paladin \
+REGISTRY_ADDR=$(kubectl get paladinregistries.core.paladin.io evm-registry -n paladin \
   -o jsonpath='{.status.contractAddress}' 2>/dev/null || echo "")
 
 [[ -z "$NOTO_ADDR" ]]     && echo "WARN: noto registryAddress not found" >&2

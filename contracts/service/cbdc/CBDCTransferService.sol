@@ -33,8 +33,6 @@ contract CBDCTransferService is
 
     event CBDCTransferred(address indexed from, address indexed to, uint256 amount);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
 
     function initialize(address cbToken_, address admin_) external initializer {
         if (cbToken_ == address(0)) revert ZeroAddress();

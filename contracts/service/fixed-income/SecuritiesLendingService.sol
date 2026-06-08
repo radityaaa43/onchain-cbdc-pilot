@@ -61,9 +61,6 @@ contract SecuritiesLendingService is
     event LoanRecalled(bytes32 indexed lendId, uint256 recallDate);
     event LoanDefaulted(bytes32 indexed lendId);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
-
     function initialize(address token_, address lifecycle_, address cbToken_, address admin_) external initializer {
         if (token_ == address(0)) revert ZeroAddress();
         if (lifecycle_ == address(0)) revert ZeroAddress();
@@ -134,7 +131,7 @@ contract SecuritiesLendingService is
             lendingFeeRateBps: feeRateBps,
             collateralAmount: collateralAmount,
             haircut: haircut,
-            startDate: block.timestamp,
+            startDate: 0,
             tenor: tenor,
             recallDate: 0,
             status: LendStatus.ACTIVE
@@ -177,7 +174,7 @@ contract SecuritiesLendingService is
         if (lend.status != LendStatus.ACTIVE) revert LendNotActive(lendId);
         if (msg.sender != lend.lender) revert NotLender(msg.sender, lend.lender);
 
-        lend.recallDate = block.timestamp + STANDARD_RECALL_NOTICE_DAYS * 1 days;
+        lend.recallDate = 0;
         emit LoanRecalled(lendId, lend.recallDate);
     }
 
