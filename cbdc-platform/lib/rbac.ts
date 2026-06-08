@@ -9,7 +9,11 @@ export type Permission =
   | "asset.create" | "asset.release"
   | "auction.view" | "auction.create" | "auction.allocate" | "auction.settle"
   | "compliance.view" | "compliance.manage"
-  | "user.manage" | "org.manage" | "audit.view";
+  | "user.manage" | "org.manage" | "audit.view"
+  | "repo.view" | "repo.trade"
+  | "lending.view" | "lending.trade"
+  | "pledge.view" | "pledge.manage"
+  | "custody.view" | "custody.manage";
 
 const GRANTS: Record<Role, Permission[]> = {
   OPERATOR_ADMIN: [
@@ -20,6 +24,10 @@ const GRANTS: Record<Role, Permission[]> = {
     "asset.create", "asset.release",
     "auction.view", "auction.create", "auction.allocate", "auction.settle",
     "compliance.view", "compliance.manage", "user.manage", "org.manage", "audit.view",
+    "repo.view", "repo.trade",
+    "lending.view", "lending.trade",
+    "pledge.view", "pledge.manage",
+    "custody.view", "custody.manage",
   ],
   ISSUANCE_OFFICER: [
     "cbdc.view", "cbdc.issue", "cbdc.redeem.process",
@@ -28,11 +36,15 @@ const GRANTS: Record<Role, Permission[]> = {
     "dvp.view", "dvp.initiate",
     "asset.create", "asset.release",
     "auction.view", "auction.create", "auction.allocate", "auction.settle",
+    "repo.view", "repo.trade",
+    "lending.view", "lending.trade",
+    "pledge.view", "pledge.manage",
+    "custody.view", "custody.manage",
   ],
   COMPLIANCE_OFFICER: ["compliance.view", "compliance.manage", "audit.view"],
-  PARTICIPANT_ADMIN: ["user.manage", "audit.view"],
-  TRADER: ["cbdc.view", "cbdc.transfer", "cbdc.approve", "bond.view", "bond.transfer", "dvp.view", "dvp.initiate", "dvp.affirm"],
-  OPS: ["cbdc.view", "cbdc.redeem.request", "dvp.view", "dvp.affirm"],
+  PARTICIPANT_ADMIN: ["user.manage", "audit.view", "repo.view", "lending.view", "pledge.view", "custody.view"],
+  TRADER: ["cbdc.view", "cbdc.transfer", "cbdc.approve", "bond.view", "bond.transfer", "dvp.view", "dvp.initiate", "dvp.affirm", "repo.view", "repo.trade", "lending.view", "lending.trade", "pledge.view", "pledge.manage"],
+  OPS: ["cbdc.view", "cbdc.redeem.request", "dvp.view", "dvp.affirm", "repo.view", "lending.view", "pledge.view", "custody.view"],
   COMPLIANCE_VIEWER: ["compliance.view", "audit.view"],
 };
 
