@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet } from "lucide-react";
+import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet, ShieldCheck } from "lucide-react";
 
 const OPERATOR_NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -8,6 +8,7 @@ const OPERATOR_NAV = [
   { href: "/admin/auction", label: "Auction", icon: Gavel },
   { href: "/admin/dvp", label: "DVP", icon: ArrowLeftRight },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/compliance", label: "Compliance", icon: ShieldCheck },
 ];
 
 const PARTICIPANT_NAV = [
