@@ -58,8 +58,9 @@ export async function GET(req: Request) {
       const bondId = searchParams.get("bondId") ?? "";
       const from   = searchParams.get("from") ?? "";
       const to     = searchParams.get("to") ?? "";
-      const amount = Number(searchParams.get("amount") ?? "0");
-      if (!bondId || !from || !to || !amount) return NextResponse.json({ error: "bondId, from, to, amount required" }, { status: 400 });
+      const amountStr = searchParams.get("amount");
+      const amount = amountStr !== null ? Number(amountStr) : null;
+      if (!bondId || !from || !to || amount === null) return NextResponse.json({ error: "bondId, from, to, amount required" }, { status: 400 });
       return NextResponse.json(await complianceDfabi.checkTransfer({ bondId, from, to, amount }));
     }
     if (type === "eligibility") {
