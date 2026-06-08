@@ -1,3 +1,4 @@
+import "server-only";
 import { auth } from "@/lib/auth/config";
 
 export async function getSession() {
