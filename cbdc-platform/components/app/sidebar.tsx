@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Coins, Landmark, Gavel, ArrowLeftRight, Users, Wallet, ShieldCheck, FileText } from "lucide-react";
 
 const OPERATOR_NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -16,6 +16,8 @@ const PARTICIPANT_NAV = [
   { href: "/participant/wallet", label: "Wallet", icon: Wallet },
   { href: "/participant/holdings", label: "Holdings", icon: Landmark },
   { href: "/participant/dvp", label: "DVP", icon: ArrowLeftRight },
+  { href: "/participant/compliance", label: "Compliance", icon: ShieldCheck },
+  { href: "/participant/reports", label: "Reports", icon: FileText },
 ];
 
 export function Sidebar({ role }: { role: string }) {
