@@ -105,7 +105,7 @@ export async function bondAdvancedRoute(app: FastifyInstance): Promise<void> {
   app.post("/pledge/create", async (req, reply) => {
     const parsed = CreatePledgeBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    await tx(config.contracts.pledgeService, "createPledge", parsed.data);
+    await tx(config.contracts.pledgeService, "createPledgeV2", parsed.data);
     const res = await call(config.contracts.pledgeService, "getLastPledgeId");
     return { pledgeId: String(res["0"]) };
   });
