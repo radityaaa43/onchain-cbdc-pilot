@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { requirePermission } from "@/lib/rbac";
 import { assetClassOf, type AssetType } from "@/lib/assets/types";
@@ -15,10 +16,9 @@ export default async function AssetDetail({ params }: { params: Promise<{ id: st
   let gwMeta: { address: string | null; assetType: number | null; registered: boolean | null } | null = null;
   if (inst.bondId) {
     try {
-      const { headers } = await import("next/headers");
       const cookieHeader = (await headers()).get("cookie") ?? "";
       const base = process.env.NEXTAUTH_URL ?? "http://localhost:3001";
-      const res = await fetch(`${base}/api/dlt/token-gateway/${inst.bondId}`, {
+      const res = await fetch(`${base}/api/dlt/token-gateway/${encodeURIComponent(inst.bondId)}`, {
         headers: { cookie: cookieHeader },
         cache: "no-store",
       });
