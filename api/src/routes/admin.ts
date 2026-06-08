@@ -2,10 +2,12 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { tx, call } from "../pente";
 
+const Addr = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
+const B32  = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 const GrantRoleBody = z.object({
-  contract: z.string(),
-  role:     z.string(),
-  account:  z.string(),
+  contract: Addr,
+  role:     B32,
+  account:  Addr,
 });
 
 export async function adminRoute(app: FastifyInstance): Promise<void> {
@@ -28,6 +30,8 @@ export async function adminRoute(app: FastifyInstance): Promise<void> {
       const { contract, role, account } = req.query;
       if (!contract || !role || !account)
         return reply.code(400).send({ error: "contract, role, account required" });
+      if (!/^0x[0-9a-fA-F]{40}$/.test(contract) || !/^0x[0-9a-fA-F]{64}$/.test(role) || !/^0x[0-9a-fA-F]{40}$/.test(account))
+        return reply.code(400).send({ error: "invalid address or role format" });
       const res = await call(contract, "hasRole", { role, account });
       return { contract, role, account, hasRole: Boolean(res["0"]) };
     }

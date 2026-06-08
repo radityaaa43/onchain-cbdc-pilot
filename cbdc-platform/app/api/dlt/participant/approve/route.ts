@@ -9,7 +9,7 @@ const Body = z.object({ spender: z.string().regex(/^0x[0-9a-fA-F]{40}$/), amount
 
 export async function POST(req: Request) {
   try {
-    const user = await requirePermission("cbdc.transfer");
+    const user = await requirePermission("cbdc.approve");
     const idempotencyKey = req.headers.get("idempotency-key");
     if (!idempotencyKey) return NextResponse.json({ error: "Idempotency-Key header required" }, { status: 400 });
     const parsed = Body.safeParse(await req.json());

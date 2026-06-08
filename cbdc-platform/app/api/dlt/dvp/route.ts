@@ -19,6 +19,11 @@ export async function POST(req: Request) {
     if (!idempotencyKey) return NextResponse.json({ error: "Idempotency-Key header required" }, { status: 400 });
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 });
+    const { bondSeller, bondBuyer, cbdcPayer, cbdcPayee } = parsed.data;
+    const parties = [bondSeller, bondBuyer, cbdcPayer, cbdcPayee].map((a) => a.toLowerCase());
+    if (!parties.includes(user.orgAddress.toLowerCase())) {
+      return NextResponse.json({ error: "Forbidden: initiating org must be one of the DVP parties" }, { status: 403 });
+    }
     const { operationId } = await startOperation(
       { userId: user.userId, orgId: user.orgId, action: "dvp.initiate", idempotencyKey, request: parsed.data },
       () => dvp.initiate(parsed.data).then((r) => ({ result: r, txHash: undefined })),

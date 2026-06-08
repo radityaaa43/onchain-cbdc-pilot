@@ -19,7 +19,16 @@ describe("can()", () => {
   it("allows TRADER to transfer cbdc", () => {
     expect(can(["TRADER"], "cbdc.transfer")).toBe(true);
   });
-  it("grants every role view permissions", () => {
-    expect(can(["COMPLIANCE_VIEWER"], "cbdc.view")).toBe(true);
+  it("grants COMPLIANCE_VIEWER only compliance/audit view, not cbdc.view", () => {
+    expect(can(["COMPLIANCE_VIEWER"], "compliance.view")).toBe(true);
+    expect(can(["COMPLIANCE_VIEWER"], "audit.view")).toBe(true);
+    expect(can(["COMPLIANCE_VIEWER"], "cbdc.view")).toBe(false);
+  });
+  it("grants TRADER cbdc.view and bond.view for participant portal", () => {
+    expect(can(["TRADER"], "cbdc.view")).toBe(true);
+    expect(can(["TRADER"], "bond.view")).toBe(true);
+  });
+  it("grants TRADER cbdc.approve for DVP setup", () => {
+    expect(can(["TRADER"], "cbdc.approve")).toBe(true);
   });
 });

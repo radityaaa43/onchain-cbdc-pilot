@@ -25,7 +25,6 @@ export async function bondsRoute(app: FastifyInstance): Promise<void> {
       bond: config.contracts.bondMetadata,
       maturityDate: parsed.data.maturityDate,
     });
-    await new Promise(r => setTimeout(r, 500));
     const res = await call(config.contracts.lifecycle, "getLastBondId");
     return { bondId: String(res["bondId"] ?? res["0"]) };
   });
