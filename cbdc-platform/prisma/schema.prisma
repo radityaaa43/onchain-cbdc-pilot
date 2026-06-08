@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Org {
@@ -44,7 +45,7 @@ model AuditLog {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  orgId     String
+  orgId     String   // denormalized: audit trail; no FK to allow cross-org log queries
   action    String
   target    String?
   payload   Json
@@ -59,8 +60,8 @@ model AuditLog {
 model Operation {
   id             String   @id @default(cuid())
   idempotencyKey String   @unique
-  userId         String
-  orgId          String
+  userId         String   // denormalized: snapshot at submission time; no FK
+  orgId          String   // denormalized: snapshot at submission time; no FK
   action         String
   status         OpStatus @default(PENDING)
   request        Json
@@ -91,7 +92,7 @@ model Instrument {
   shariahBoard       String?
   decimals           Int?
   configJson         Json?
-  createdById        String
+  createdById        String         // denormalized: User id snapshot; no FK to allow system-created instruments
   auctions           AuctionRound[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
@@ -107,7 +108,7 @@ model AuctionRound {
   auctionType  String        @default("DIRECT_ALLOCATION")
   status       AuctionStatus @default(DRAFT)
   allocations  Allocation[]
-  createdById  String
+  createdById  String        // denormalized: User id snapshot; no FK
   createdAt    DateTime      @default(now())
 }
 
