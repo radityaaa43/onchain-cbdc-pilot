@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,7 +74,7 @@ export function NettingView() {
           <>
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               {Object.entries(session).map(([k, v]) => (
-                <><dt key={`k-${k}`} className="text-muted-foreground">{k}</dt><dd key={`v-${k}`}>{String(v)}</dd></>
+                <Fragment key={k}><dt className="text-muted-foreground">{k}</dt><dd>{String(v)}</dd></Fragment>
               ))}
             </dl>
             <div className="mt-3 flex gap-2">
