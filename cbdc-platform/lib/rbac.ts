@@ -14,7 +14,10 @@ export type Permission =
   | "lending.view" | "lending.trade"
   | "pledge.view" | "pledge.manage"
   | "custody.view" | "custody.manage"
-  | "corporate.view" | "corporate.manage";
+  | "corporate.view" | "corporate.manage"
+  | "netting.manage"
+  | "oracle.manage"
+  | "settlement.view" | "settlement.manage";
 
 const GRANTS: Record<Role, Permission[]> = {
   OPERATOR_ADMIN: [
@@ -30,6 +33,7 @@ const GRANTS: Record<Role, Permission[]> = {
     "pledge.view", "pledge.manage",
     "custody.view", "custody.manage",
     "corporate.view", "corporate.manage",
+    "netting.manage", "oracle.manage", "settlement.view", "settlement.manage",
   ],
   ISSUANCE_OFFICER: [
     "cbdc.view", "cbdc.issue", "cbdc.redeem.process",
@@ -43,11 +47,12 @@ const GRANTS: Record<Role, Permission[]> = {
     "pledge.view", "pledge.manage",
     "custody.view", "custody.manage",
     "corporate.view", "corporate.manage",
+    "settlement.view", "settlement.manage",
   ],
-  COMPLIANCE_OFFICER: ["compliance.view", "compliance.manage", "audit.view"],
-  PARTICIPANT_ADMIN: ["user.manage", "audit.view", "repo.view", "lending.view", "pledge.view", "custody.view"],
-  TRADER: ["cbdc.view", "cbdc.transfer", "cbdc.approve", "bond.view", "bond.transfer", "dvp.view", "dvp.initiate", "dvp.affirm", "repo.view", "repo.trade", "lending.view", "lending.trade", "pledge.view", "pledge.manage"],
-  OPS: ["cbdc.view", "cbdc.redeem.request", "dvp.view", "dvp.affirm", "repo.view", "lending.view", "pledge.view", "custody.view"],
+  COMPLIANCE_OFFICER: ["compliance.view", "compliance.manage", "audit.view", "settlement.view"],
+  PARTICIPANT_ADMIN: ["user.manage", "audit.view", "repo.view", "lending.view", "pledge.view", "custody.view", "settlement.view"],
+  TRADER: ["cbdc.view", "cbdc.transfer", "cbdc.approve", "bond.view", "bond.transfer", "dvp.view", "dvp.initiate", "dvp.affirm", "repo.view", "repo.trade", "lending.view", "lending.trade", "pledge.view", "pledge.manage", "settlement.view"],
+  OPS: ["cbdc.view", "cbdc.redeem.request", "dvp.view", "dvp.affirm", "repo.view", "lending.view", "pledge.view", "custody.view", "settlement.view"],
   COMPLIANCE_VIEWER: ["compliance.view", "audit.view"],
 };
 
