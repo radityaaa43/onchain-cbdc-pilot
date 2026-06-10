@@ -52,6 +52,7 @@ spec:
       kind: Paladin
       jsonPointers:
         - /spec/service/ports
+        - /spec/config
       jqPathExpressions:
         - .spec.transports[].ports[].protocol
         - .spec.transports[].tls.issuer
