@@ -8,16 +8,16 @@ const db = new PrismaClient({ adapter });
 async function main() {
   const central = await db.org.upsert({
     where: { id: "bi-central" },
-    update: {},
+    update: { onchainAddress: "0xd61f35111dd2df020909ea2c2332ba8f84b22996" },
     create: {
       id: "bi-central", name: "Bank Indonesia (Central)", type: "CENTRAL_BANK",
-      onchainAddress: "0x0000000000000000000000000000000000000001",
+      onchainAddress: "0xd61f35111dd2df020909ea2c2332ba8f84b22996",
       paladinIdentity: "cbdc-pilot@node1", isSelf: true,
     },
   });
   const org2 = await db.org.upsert({
     where: { id: "bank-xyz" },
-    update: {},
+    update: { onchainAddress: "0x92b261e23a5f57ca1ee576c7c89d01644097b722" },
     create: {
       id: "bank-xyz", name: "Bank XYZ (Primary Dealer)", type: "PRIMARY_DEALER",
       onchainAddress: "0x92b261e23a5f57ca1ee576c7c89d01644097b722",
@@ -26,7 +26,7 @@ async function main() {
   });
   const org3 = await db.org.upsert({
     where: { id: "bank-abc" },
-    update: {},
+    update: { onchainAddress: "0x6c1901c1c4ebfdb71c81b66d7e3d36b0bea08d69" },
     create: {
       id: "bank-abc", name: "Bank ABC (Secondary Dealer)", type: "BANK",
       onchainAddress: "0x6c1901c1c4ebfdb71c81b66d7e3d36b0bea08d69",
