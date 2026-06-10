@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "CBDC & Bond Platform", description: 
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`dark ${sans.variable} ${mono.variable}`}>
+    <html lang="id" className={`dark ${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="bg-background text-foreground font-sans antialiased">
         <Providers>{children}</Providers>
         <Toaster />

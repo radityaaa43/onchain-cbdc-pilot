@@ -115,7 +115,7 @@ contract SecuritiesLendingService is
         uint256 haircut
     ) internal returns (bytes32 lendId) {
         if (amount == 0) revert ZeroAmount();
-        lendId = keccak256(abi.encode(++_lendNonce, bondId, lender, borrower, amount, block.timestamp));
+        lendId = keccak256(abi.encode(++_lendNonce, bondId, lender, borrower, amount));
 
         // Overcollateralization: borrower posts collateral = amount × (10000 + haircut) / 10000
         uint256 collateralAmount = amount * (10000 + haircut) / 10000;

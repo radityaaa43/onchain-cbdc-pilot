@@ -15,7 +15,8 @@ import {ISettlementFailureService} from "../../interfaces/service/asset-support/
 import {
     ZeroAddress, ZeroAmount, InvalidParties,
     SettlementNotFound, SettlementNotPending,
-    SettlementWindowExpired, AffirmationRequired, AlreadyAffirmed
+    SettlementWindowExpired, AffirmationRequired, AlreadyAffirmed,
+    DVPSettlementFailed_InsufficientFunds
 } from "../../library/Errors.sol";
 
 interface ICouponServiceView {
@@ -39,6 +40,7 @@ contract DVPService is
     using SafeERC20 for IERC20;
 
     bytes32 public constant SETTLEMENT_ROLE = keccak256("SETTLEMENT_ROLE");
+    bytes32 public constant PRIMARY   = keccak256("PRIMARY");
     bytes32 public constant SECONDARY = keccak256("SECONDARY");
 
     IFixedIncomeToken public fixedIncomeToken;
@@ -99,7 +101,8 @@ contract DVPService is
         address bondSeller,
         address bondBuyer,
         uint256 bondAmount,
-        bytes32 bondPartition,
+        bytes32 fromState,
+        bytes32 toState,
         address cbdcPayer,
         address cbdcPayee,
         uint256 cbdcAmount,
@@ -117,7 +120,8 @@ contract DVPService is
             bondSeller: bondSeller,
             bondBuyer: bondBuyer,
             bondAmount: bondAmount,
-            bondPartition: bondPartition,
+            fromState: fromState,
+            toState: toState,
             cbdcPayer: cbdcPayer,
             cbdcPayee: cbdcPayee,
             cbdcAmount: cbdcAmount,
@@ -140,7 +144,8 @@ contract DVPService is
         address bondSeller,
         address bondBuyer,
         uint256 bondAmount,
-        bytes32 bondPartition,
+        bytes32 fromState,
+        bytes32 toState,
         address cbdcPayer,
         address cbdcPayee,
         uint256 cbdcAmount,
@@ -159,7 +164,8 @@ contract DVPService is
             bondSeller: bondSeller,
             bondBuyer: bondBuyer,
             bondAmount: bondAmount,
-            bondPartition: bondPartition,
+            fromState: fromState,
+            toState: toState,
             cbdcPayer: cbdcPayer,
             cbdcPayee: cbdcPayee,
             cbdcAmount: cbdcAmount,
@@ -207,52 +213,29 @@ contract DVPService is
         if (s.settlementId != settlementId) revert SettlementNotFound(settlementId);
         if (s.status != SettlementStatus.PENDING) revert SettlementNotPending(settlementId);
 
-        // Enforce settlement deadline if set
         if (s.settlementDeadline != 0 && block.timestamp > s.settlementDeadline) {
             _reportFailure(settlementId, ISettlementFailureService.FailureReason.TIMEOUT);
             return;
         }
 
-        bytes32 partition = s.bondPartition;
-
-        if (s.model == SettlementModel.SECURITIES_FIRST) {
-            try fixedIncomeToken.operatorTransferByPartition(partition, s.bondSeller, s.bondBuyer, s.bondAmount, "", "") {
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_SECURITIES);
-                return;
-            }
-            try IERC20(address(cbToken)).transferFrom(s.cbdcPayer, s.cbdcPayee, s.cbdcAmount) returns (bool ok) {
-                if (!ok) { _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS); return; }
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS);
-                return;
-            }
-        } else if (s.model == SettlementModel.MONEY_FIRST) {
-            try IERC20(address(cbToken)).transferFrom(s.cbdcPayer, s.cbdcPayee, s.cbdcAmount) returns (bool ok) {
-                if (!ok) { _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS); return; }
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS);
-                return;
-            }
-            try fixedIncomeToken.operatorTransferByPartition(partition, s.bondSeller, s.bondBuyer, s.bondAmount, "", "") {
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_SECURITIES);
-                return;
-            }
+        // Bond leg: atomic, reverts entire TX on failure.
+        // Primary market (PRIMARY→PRIMARY): straight holder transfer within PRIMARY partition.
+        // Secondary/outright (any→SECONDARY, incl. PRIMARY→SECONDARY): crossHolderTransition
+        // handles partition change + secondary holder registry in one call.
+        if (s.fromState == PRIMARY && s.toState == PRIMARY) {
+            bytes32 primaryPartition = fixedIncomeToken.computePartition(s.bondId, PRIMARY);
+            fixedIncomeToken.operatorTransferByPartition(
+                primaryPartition, s.bondSeller, s.bondBuyer, s.bondAmount, "", ""
+            );
         } else {
-            // PARALLEL: both legs in same tx — equivalent to SECURITIES_FIRST on EVM
-            try fixedIncomeToken.operatorTransferByPartition(partition, s.bondSeller, s.bondBuyer, s.bondAmount, "", "") {
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_SECURITIES);
-                return;
-            }
-            try IERC20(address(cbToken)).transferFrom(s.cbdcPayer, s.cbdcPayee, s.cbdcAmount) returns (bool ok) {
-                if (!ok) { _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS); return; }
-            } catch {
-                _reportFailure(settlementId, ISettlementFailureService.FailureReason.INSUFFICIENT_FUNDS);
-                return;
-            }
+            lifecycleManager.crossHolderTransition(
+                s.bondId, s.bondSeller, s.bondBuyer, s.bondAmount, s.fromState, s.toState
+            );
         }
+
+        // CBDC leg: atomic with bond leg.
+        bool ok = IERC20(address(cbToken)).transferFrom(s.cbdcPayer, s.cbdcPayee, s.cbdcAmount);
+        if (!ok) revert DVPSettlementFailed_InsufficientFunds(settlementId);
 
         lifecycleManager.registerHolder(s.bondId, s.bondBuyer);
         s.status = SettlementStatus.CONFIRMED;

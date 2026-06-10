@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 const Login = z.object({ email: z.string().email(), password: z.string().min(1) });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [

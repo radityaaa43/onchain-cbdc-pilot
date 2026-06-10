@@ -119,7 +119,7 @@ export async function complianceRoute(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       const { from, to, assetId } = req.query;
       if (!from || !to || !assetId) return reply.code(400).send({ error: "from, to, assetId required" });
-      const res = await call(config.contracts.complianceService, "checkTransferAllowed", { from, to, "": 0, assetId });
+      const res = await call(config.contracts.complianceService, "checkTransferAllowed", { from, to, amount: 0, assetId });
       return { allowed: Boolean(res["0"]), reason: String(res["1"] ?? "") };
     }
   );

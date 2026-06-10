@@ -6,7 +6,16 @@ import { config } from "../config";
 
 const PRIMARY_STATE   = ethers.id("PRIMARY");
 const SECONDARY_STATE = ethers.id("SECONDARY");
-const STATE_MAP: Record<string, string> = { PRIMARY: PRIMARY_STATE, SECONDARY: SECONDARY_STATE };
+const STATE_MAP: Record<string, string> = {
+  PRIMARY:   PRIMARY_STATE,
+  SECONDARY: SECONDARY_STATE,
+  REPO:      ethers.id("REPO"),
+  PLEDGED:   ethers.id("PLEDGED"),
+  LENT:      ethers.id("LENT"),
+  LOCKED:    ethers.id("LOCKED"),
+  MATURED:   ethers.id("MATURED"),
+  DEFAULTED: ethers.id("DEFAULTED"),
+};
 
 const RegisterBody   = z.object({ maturityDate: z.number().positive() });
 const IssueBody      = z.object({ investor: z.string(), amount: z.number().positive() });
@@ -21,12 +30,12 @@ export async function bondsRoute(app: FastifyInstance): Promise<void> {
   app.post("/bonds/register", async (req, reply) => {
     const parsed = RegisterBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    await tx(config.contracts.lifecycle, "registerBond", {
+    await tx(config.contracts.lifecycle, "registerBondV2", {
       bond: config.contracts.bondMetadata,
       maturityDate: parsed.data.maturityDate,
     });
     const res = await call(config.contracts.lifecycle, "getLastBondId");
-    return { bondId: String(res["bondId"] ?? res["0"]) };
+    return { bondId: String(res["0"]) };
   });
 
   app.post<{ Params: { bondId: string } }>("/bonds/:bondId/issue", async (req, reply) => {
@@ -57,7 +66,7 @@ export async function bondsRoute(app: FastifyInstance): Promise<void> {
 
   app.get("/bonds/last-id", async () => {
     const res = await call(config.contracts.lifecycle, "getLastBondId");
-    return { bondId: String(res["bondId"] ?? res["0"]) };
+    return { bondId: String(res["0"]) };
   });
 
   app.get<{ Params: { bondId: string }; Querystring: { state?: string; holder?: string } }>(
@@ -65,7 +74,7 @@ export async function bondsRoute(app: FastifyInstance): Promise<void> {
       const { state = "PRIMARY", holder } = req.query;
       if (!holder) return reply.code(400).send({ error: "holder query param required" });
       const stateHash = STATE_MAP[state];
-      if (!stateHash) return reply.code(400).send({ error: "state must be PRIMARY or SECONDARY" });
+      if (!stateHash) return reply.code(400).send({ error: `unknown state: ${state}` });
       const res = await call(config.contracts.fiToken, "balanceOfByBond", {
         bondId: req.params.bondId, state: stateHash, holder,
       });

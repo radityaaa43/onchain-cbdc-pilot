@@ -117,7 +117,7 @@ async function getOrCreateGroup(paladin: PaladinClient): Promise<PentePrivacyGro
 
   console.log("Creating new Pente privacy group...");
   const group = await factory.newPrivacyGroup({
-    members: [FROM, "cbdc-pilot@node2"],
+    members: [FROM, "cbdc-pilot@org2-node", "cbdc-pilot@org3-node"],
     evmVersion: "shanghai",
     endorsementType: "group_scoped_identities",
     externalCallsEnabled: false,

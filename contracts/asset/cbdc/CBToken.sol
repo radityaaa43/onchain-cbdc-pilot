@@ -94,6 +94,11 @@ contract CBToken is
         _burn(from, amount);
     }
 
+    /// @notice Set allowance on behalf of any holder. Requires DEFAULT_ADMIN_ROLE.
+    function approveFor(address owner, address spender, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _approve(owner, spender, amount);
+    }
+
     // ──────────────────────────────────────────────────────
     // External: Admin (2-step rotation)
     // ──────────────────────────────────────────────────────

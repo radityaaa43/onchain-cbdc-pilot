@@ -11,7 +11,8 @@ interface IDVPService {
         address bondSeller;
         address bondBuyer;
         uint256 bondAmount;
-        bytes32 bondPartition;
+        bytes32 fromState; // lifecycle state seller holds bonds in (PRIMARY or SECONDARY)
+        bytes32 toState;   // lifecycle state buyer receives bonds in (PRIMARY or SECONDARY)
         address cbdcPayer;
         address cbdcPayee;
         uint256 cbdcAmount;
@@ -29,7 +30,8 @@ interface IDVPService {
         address bondSeller,
         address bondBuyer,
         uint256 bondAmount,
-        bytes32 bondPartition,
+        bytes32 fromState,
+        bytes32 toState,
         address cbdcPayer,
         address cbdcPayee,
         uint256 cbdcAmount,
@@ -43,7 +45,8 @@ interface IDVPService {
         address bondSeller,
         address bondBuyer,
         uint256 bondAmount,
-        bytes32 bondPartition,
+        bytes32 fromState,
+        bytes32 toState,
         address cbdcPayer,
         address cbdcPayee,
         uint256 cbdcAmount,

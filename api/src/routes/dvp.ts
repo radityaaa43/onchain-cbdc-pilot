@@ -1,18 +1,25 @@
 import { FastifyInstance } from "fastify";
+import { ethers } from "ethers";
 import { z } from "zod";
 import { tx, txWithLogs, call } from "../pente";
 import { config } from "../config";
 
+const STATE_MAP: Record<string, string> = {
+  PRIMARY:   ethers.id("PRIMARY"),
+  SECONDARY: ethers.id("SECONDARY"),
+};
+
 const InitiateBody = z.object({
-  bondId:        z.string(),
-  bondSeller:    z.string(),
-  bondBuyer:     z.string(),
-  bondAmount:    z.number().positive(),
-  bondPartition: z.string(),
-  cbdcPayer:     z.string(),
-  cbdcPayee:     z.string(),
-  cbdcAmount:    z.number().positive(),
-  model:         z.number().int().min(0).max(2),
+  bondId:     z.string(),
+  bondSeller: z.string(),
+  bondBuyer:  z.string(),
+  bondAmount: z.number().positive(),
+  fromState:  z.enum(["PRIMARY", "SECONDARY"]),
+  toState:    z.enum(["PRIMARY", "SECONDARY"]),
+  cbdcPayer:  z.string(),
+  cbdcPayee:  z.string(),
+  cbdcAmount: z.number().positive(),
+  model:      z.number().int().min(0).max(2),
 });
 
 const ReasonBody = z.object({ reason: z.string() });
@@ -21,7 +28,12 @@ export async function dvpRoute(app: FastifyInstance): Promise<void> {
   app.post("/dvp/initiate", async (req, reply) => {
     const parsed = InitiateBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    const { logs } = await txWithLogs(config.contracts.dvp, "initiateDVP", parsed.data);
+    const { fromState, toState, ...rest } = parsed.data;
+    const { logs } = await txWithLogs(config.contracts.dvp, "initiateDVP", {
+      ...rest,
+      fromState: STATE_MAP[fromState],
+      toState:   STATE_MAP[toState],
+    });
     if (logs.length === 0) return reply.code(500).send({ error: "No logs from initiateDVP" });
     const settlementId = logs[0]?.topics?.[1];
     if (!settlementId) return reply.code(500).send({ error: "Invalid log format from initiateDVP" });

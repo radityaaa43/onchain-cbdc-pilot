@@ -69,8 +69,9 @@ contract LifecycleManager is
     bytes32[] private _activeBonds;
     bytes32[] private _defaultedBonds;
     uint256 private _bondCounter;
+    bytes32 private _lastBondId;
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     // ──────────────────────────────────────────────────────
     // Events
@@ -174,6 +175,21 @@ contract LifecycleManager is
     function getLastBondId() external view returns (bytes32) {
         if (_activeBonds.length == 0) return bytes32(0);
         return _activeBonds[_activeBonds.length - 1];
+    }
+
+    // Pente-compat v3: no return value, no array push, no dynamic storage write except mapping
+    function registerBondV3(address bond, uint256 maturityDate) external onlyLifecycleManager {
+        if (bond == address(0)) revert InvalidBondAddress();
+        _bondCounter++;
+        bytes32 bondId = keccak256(abi.encode(_bondCounter, bond, maturityDate));
+        _bondInfo[bondId].bondAddress = bond;
+        _bondInfo[bondId].maturityDate = maturityDate;
+        _bondInfo[bondId].isActive = true;
+        _lastBondId = bondId;
+    }
+
+    function getLastBondIdV3() external view returns (bytes32) {
+        return _lastBondId;
     }
 
     // ──────────────────────────────────────────────────────

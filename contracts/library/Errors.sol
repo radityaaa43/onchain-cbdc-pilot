@@ -33,6 +33,7 @@ error SettlementNotPending(bytes32 settlementId);
 error SettlementWindowExpired(bytes32 settlementId, uint256 deadline, uint256 currentTime);
 error AffirmationRequired(bytes32 settlementId);
 error AlreadyAffirmed(bytes32 settlementId, address affirmer);
+error DVPSettlementFailed_InsufficientFunds(bytes32 settlementId);
 
 // ─── Repo ─────────────────────────────────────────────────────────────────────
 error RepoNotActive(bytes32 repoId);

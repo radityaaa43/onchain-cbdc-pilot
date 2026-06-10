@@ -36,6 +36,15 @@ async function main() {
       update: {}, create: { userId: admin.id, role },
     });
   }
+  const trader = await db.user.upsert({
+    where: { email: "trader@bank.id" },
+    update: {},
+    create: { email: "trader@bank.id", name: "Trader Bank XYZ", passwordHash: pw, orgId: "bank-xyz" },
+  });
+  await db.userRole.upsert({
+    where: { userId_role: { userId: trader.id, role: "TRADER" } },
+    update: {}, create: { userId: trader.id, role: "TRADER" },
+  });
   console.log("seeded");
 }
 

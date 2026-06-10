@@ -5,7 +5,8 @@ import { config } from "../config";
 
 const IssueBody    = z.object({ to: z.string(), amount: z.number().positive() });
 const TransferBody = z.object({ from: z.string(), to: z.string(), amount: z.number().positive() });
-const ApproveBody  = z.object({ spender: z.string(), amount: z.number().nonnegative() });
+const ApproveBody     = z.object({ spender: z.string(), amount: z.number().nonnegative() });
+const ApproveForBody  = z.object({ owner: z.string(), spender: z.string(), amount: z.number().nonnegative() });
 
 export async function cbdcRoute(app: FastifyInstance): Promise<void> {
   app.post("/cbdc/issue", async (req, reply) => {
@@ -36,6 +37,13 @@ export async function cbdcRoute(app: FastifyInstance): Promise<void> {
     const parsed = ApproveBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     await tx(config.contracts.cbToken, "approve", parsed.data);
+    return { ok: true };
+  });
+
+  app.post("/cbdc/approve-for", async (req, reply) => {
+    const parsed = ApproveForBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    await tx(config.contracts.cbToken, "approveFor", parsed.data);
     return { ok: true };
   });
 

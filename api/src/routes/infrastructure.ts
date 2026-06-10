@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { ethers } from "ethers";
 import { z } from "zod";
-import { tx, call } from "../pente";
+import { tx, txWithLogs, call } from "../pente";
 import { config } from "../config";
 
 // ─── NettingService ──────────────────────────────────────────────────────────
@@ -68,8 +69,11 @@ export async function infrastructureRoute(app: FastifyInstance): Promise<void> {
   // ── NettingService ──────────────────────────────────────────────────────
 
   app.post("/netting/session", async (_req, _reply) => {
-    const res = await tx(config.contracts.netting, "openSession", {});
-    return { sessionId: String((res as unknown as Record<string, unknown>)?.["sessionId"] ?? "") };
+    const { logs } = await txWithLogs(config.contracts.netting, "openSession", {});
+    const EVENT_SIG = ethers.id("NettingSessionOpened(bytes32)");
+    const log = logs.find(l => l.topics[0] === EVENT_SIG);
+    const sessionId = log?.topics[1] ?? "";
+    return { sessionId };
   });
 
   app.post("/netting/session/entry", async (req, reply) => {
